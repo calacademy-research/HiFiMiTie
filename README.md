@@ -3,6 +3,10 @@ HiFiMiTie -- Find &amp; Analyze Metazoan Mitochondria from HiFi reads
 
 This is a work in progress. And is currently made to run on CAS ccg setups. Several programs and scripts have not yet been uploaded.
 
+HiFiMiTie takes advantage of the fact that the PacBio HiFi read cell output can contain a hundred to a thousand mitochondrial reads representing most to all to sometimes several copies of the subject's mitochondria.
+
+It relies on a local copy of the NCBI mito database being downloaded and several supporting files being constructed from that. Scripts for this will added in the supporting directory soon. The primary tools used are blastn, mitfi, cmsearch, megahit, mafft and a consensus script.
+
 ```
     HiFiMiTie version 0.01 -- Find & Analyze Metazoan Mitochondria from HiFi reads
 
