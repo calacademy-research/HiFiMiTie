@@ -1,0 +1,6 @@
+# eventually this should have ALL of the system dependent directory info
+# so this is the only file that needs to be changed to point to
+# files not found here or in subdirs of here
+mitodb_dir	/ccg/blastdbs
+mitodb_name	mito
+taxonomy_dir	/ccg/db_sets/taxdump

@@ -1,0 +1,13 @@
+#target name         accession query name           accession mdl mdl from   mdl to seq from   seq to strand trunc pass   gc  bias  score   E-value inc description of target
+#------------------- --------- -------------------- --------- --- -------- -------- -------- -------- ------ ----- ---- ---- ----- ------ --------- --- ---------------------
+mito                 -         12snew_curated.47-1  -          cm        1      952       72     1025      +    no    1 0.38  60.7  845.2  1.3e-262 !   megahit	79_3
+#
+# Program:         cmsearch
+# Version:         1.1.2 (July 2016)
+# Pipeline mode:   SEARCH
+# Query file:      12snew_v1.1.2.cm
+# Target file:     mito_megahit.fasta
+# Option settings: cmsearch --tblout l12s_tbl.out 12snew_v1.1.2.cm mito_megahit.fasta 
+# Current dir:     /home/ccg-share/bin/HiFiMiTie_dir/models
+# Date:            Wed Apr 14 15:34:55 2021
+# [ok]

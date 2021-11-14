@@ -1,0 +1,6 @@
+2	Vertebrate
+4	Mold
+5	Invertebrate	Arthropoda
+9	Echinoderm	starfish, sea urchins, sand dollars, and sea cucumbers
+13	Ascidian	tunicates and sea squirts
+14	Alternative-flatworm
