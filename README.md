@@ -62,4 +62,4 @@ Example forthcoming.
 
 ### Installation
 
-Not now, but eventually this should require cloning this repo to say ~/bin/HiFiMiTie then creating a softlink ``ln -s ~/bin/HiFiMiTie/hifimitie.sh ~/bin/hifimitie`` and another one ``ln -s ~/bin/hifimitie ~/bin/hfmt`` and downloading the dependencies. The command ``hifimitie check`` checks for the existence of the major dependencies.
+Not now, but eventually this should require cloning this repo to say ~/bin/HiFiMiTie then creating a softlink `ln -s ~/bin/HiFiMiTie/hifimitie.sh ~/bin/hifimitie` and another one `ln -s ~/bin/hifimitie ~/bin/hfmt` and downloading the dependencies. The command ``hifimitie check`` checks for the existence of the major dependencies.
