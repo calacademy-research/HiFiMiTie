@@ -9,7 +9,7 @@ It relies on a local copy of the NCBI mito database being downloaded and several
 
 Each read is run through rrna and trna annotation to determine order. Location of one or more Control Regions (CRs) is also discerned, along with CR tandem repeat analysis, and heteroplasmy analysis. HiFiMiTie was built around scripts that found non-standard tRNA (WACNY instead of WANCY) and substantial tandem repeat heteroplasmy in the CR of a fish mitochondrial genome.
 
-You can see the basic pipeline in the help screen below. However, to execute the pipeline is is only necessary to use hifimitie (or its abbreviation hfmt) with init to set the taxonomy numeric identifier and the PacBio HiFi file(s) -- fastq or fasta accepted; then use run indicating the number of threads to use.
+You can see the basic pipeline in the help screen below. However, to execute the pipeline it is only necessary to use hifimitie (or its abbreviation hfmt) with init to set the taxonomy numeric identifier and the PacBio HiFi file(s) -- fastq or fasta accepted; then use run indicating the number of threads to use.
 
 Example forthcoming.
 
