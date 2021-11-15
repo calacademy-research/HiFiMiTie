@@ -1,11 +1,17 @@
 # HiFiMiTie
 HiFiMiTie -- Find &amp; Analyze Metazoan Mitochondria from HiFi reads
 
-This is a work in progress. And is currently made to run on CAS ccg setups. Several programs and scripts have not yet been uploaded.
+**This is a work in progress.** And is currently made to run on CAS ccg setups. Several programs and scripts have not yet been uploaded. But the broad brush of the pipeline is represented in the scripts in the scripts directory. These are primarily bash and awk scripts calling out to other programs.
 
 HiFiMiTie takes advantage of the fact that the PacBio HiFi read cell output can contain a hundred to a thousand mitochondrial reads each representing most to all to sometimes several copies of the subject's mitochondria.
 
-It relies on a local copy of the NCBI mito database being downloaded and several supporting files being constructed from that. Scripts for this will added in the supporting directory soon. The primary tools used are blastn, mitfi, cmsearch, megahit, mafft and a consensus script.
+It relies on a local copy of the NCBI mito database being downloaded and several supporting files being constructed from that. Scripts for this will be added in the support_files directory soon. The primary tools used are blastn, mitfi, cmsearch, megahit, trf, mafft and a consensus script.
+
+Each read is run through rrna and trna annotation to determine order. Location of one or more Control Regions (CRs) is also discerned, along with CR tandem repeat analysis, and heteroplasmy analysis. HiFiMiTie was built around scripts that found non-standard tRNA (WACNY instead of WANCY) and substantial tandem repeat heteoplasmy in the CR of a fish mitochondrial genome.
+
+You can see the basic pipeline in the help screen below. However, to execute the pipeline is is only necessary to use hifimitie (or its abbreviation hfmt) with init to set the taxonomy numeric identifier and the PacBio HiFi file(s) -- fastq or fasta accepted; then use run indicating the number of threads to use.
+
+Example forthcoming.
 
 ```
     HiFiMiTie version 0.01 -- Find & Analyze Metazoan Mitochondria from HiFi reads
@@ -53,3 +59,7 @@ It relies on a local copy of the NCBI mito database being downloaded and several
       -- Auxiliary
          settings      check       mitoCodeFromAccnOrTaxid       mitodb_update.sh
 ```
+
+### Installation
+
+Not now, but eventually this should require cloning this repo to say ~/bin/HiFiMiTie then creating a softlink ``ln -s ~/bin/HiFiMiTie/hifimitie.sh ~/bin/hifimitie`` and another one ``ln -s ~/bin/hifimitie ~/bin/hfmt`` and dowmloading the dependencies. The command ``hifimitie check`` checks for the existence of the major dependencies.
