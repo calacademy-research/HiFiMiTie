@@ -9,7 +9,7 @@
 # we are using this since mito_analyze.py might not have the Bio package accessible
 # longer term should convert to python3 and encourage installation of the Bio package
 
-Bio_module_loc="/home/jhenderson/.local/lib/python2.7/site-packages"
-[[ "$PYTHONPATH" == *"$Bio_module_loc"* ]] || export PYTHONPATH=$PYTHONPATH:$Bio_module_loc
+# Bio_module_loc="/home/jhenderson/.local/lib/python2.7/site-packages"
+# [[ "$PYTHONPATH" == *"$Bio_module_loc"* ]] || export PYTHONPATH=$PYTHONPATH:$Bio_module_loc
 
 #-------------------------------------------------------------------------------------------------#

@@ -53,7 +53,7 @@ function get_megahit_anno {
 }
 
 function prt_results {
-   local show_per_line=$1; [ -z $show_per_line ] && $show_per_line=160
+   local show_per_line=$1; [ -z $show_per_line ] && show_per_line=160
    local show_all=$2; [ -z $show_all ] && show_all=0
 
    bioawk_cas -v show=$show_per_line -v show_all=$show_all '   # we use charcount() from bioawk_cas

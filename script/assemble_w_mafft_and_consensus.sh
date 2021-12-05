@@ -146,6 +146,20 @@ function mitfi_fasta {
    [ -s $mitfi_file ] && msglog_module $(basename $mitfi_file) created with $(nocomment $mitfi_file | wc -l) entries
 }
 
+function do_OL_search {
+   local mito_fasta=$(realpath $1)
+   set_fastx_basename $mito_fasta
+   local pfx=${fastx_basename}
+   local OL_tbl=$aligncm_dir/${pfx}_OL.tbl
+
+   run_if_no_file noop $OL_tbl
+   [ -s $OL_tbl ] && return 0 # already made the file
+
+   search_OL $mito_fasta $aligncm_dir
+   [ -s $aligncm_dir/OL.tbl ] && mv $aligncm_dir/OL.tbl $OL_tbl
+   [ -s $OL_tbl ] && msglog_module "OL.tbl created in $aligncm_dir for $(basename $mito_fasta)"
+}
+
 # search for 12S and 16S rrna sequences in the fasta file of arg 1
 function search_12S_16S {
    local mito_fasta=$(realpath $1)
@@ -172,14 +186,16 @@ function anno_fasta { # mitfi file and one with gh and 12S and 16S file added cr
    [ ! -s "$fasta" ] && msglog_module $fasta not found or empty && return 1
 
    mitfi_fasta $fasta
+   do_OL_search $fasta
    search_12S_16S $fasta
 
    set_fastx_basename $fasta
    local pfx=$aligncm_dir/${fastx_basename}
 
    ${script_dir}/add_goosehairpin_to_mitfi.sh ${pfx}.mitfi $fasta | \
-   ${script_dir}/add_rrna_to_mitfi.sh ${pfx}_rrnS.tbl -  | \
-   ${script_dir}/add_rrna_to_mitfi.sh ${pfx}_rrnL.tbl -  | \
+   ${script_dir}/add_rrna_to_mitfi.sh ${pfx}_rrnS.tbl     -  | \
+   ${script_dir}/add_rrna_to_mitfi.sh ${pfx}_rrnL.tbl     -  | \
+   ${script_dir}/add_rrna_to_mitfi.sh ${pfx}_OL.tbl - | \
    ${script_dir}/add_CR_to_mitfi.sh ${wdir_path}/settings.tsv - $(asmlen $fasta) > ${pfx}.cm_anno
 
    [ -s ${pfx}.cm_anno ] && msglog_module $(basename ${pfx}.cm_anno) created with rrnS, rrnL, cr and any goose hairpin added to mitfi results
@@ -275,6 +291,19 @@ function reflow_to_first_trna {
    msglog_module "$msa_mito_fa reflowed to begin with $tf ($first_trna)"
 }
 
+function check_for_tandem_repeats {
+   local trf_dir=$msa_trf_dir
+   local fa_file=../$msa_mito_fa
+
+   [ ! -d $trf_dir ] && mkdir $trf_dir; local retcode=$?
+   [ ! -d $trf_dir ] && msglog_module "Problem creating $trf_dir [$retcode]" && return $retcode
+
+   pushd $trf_dir
+   run_trf.sh $fa_file
+   echo "" ## trf needsd final newline
+   popd
+}
+
 ###############################################################################
 #                                do the work                                  #
 ###############################################################################
@@ -314,3 +343,7 @@ path_mitfi_msa_mito=${aligncm_dir}/${fastx_basename}.mitfi
 # if cr_succ_trna is not the same as the first_trna setting we will need to reflow to put this at the beginning
 [ ! -s $path_mitfi_msa_mito ] && reflow_to_first_trna
 anno_fasta $msa_mito_fa_path
+
+# search for tandem repeats in the mito, specifically expect them if anywhere in the Control Region(s)
+msa_trf_dir=${alignasm_dir}/trf_output
+run_if_no_file check_for_tandem_repeats ${msa_trf_dir}/trf_stats.txt

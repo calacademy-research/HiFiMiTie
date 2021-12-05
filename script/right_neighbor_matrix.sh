@@ -38,6 +38,13 @@ awk -v show_first=$show_first '
       skip = 0
       $7 = "16S"
    }
+   $8 ~ "^OL" {
+      skip = 0
+      $7 = "OL"
+   }
+   $7 == "OH" {
+      skip = 0
+   }
 
    # skip comment and low quality hits
    skip {next}

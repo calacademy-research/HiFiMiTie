@@ -15,3 +15,8 @@ msg $PYTHONPATH
 msg
 
 mito_analyze.py
+
+msg "show numrecs"
+numrecs /home/jhenderson/CAJQFG01.fasta
+
+echo ${exec_path}/${consensus_dir}

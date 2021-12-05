@@ -22,6 +22,8 @@ module=$(basename $(realpath $0) .sh | sed "s/^[0-9][0-9]_//")
 
 data_dir=${src_dir}/data
 
+: path from which we run this is in $exec_path
+
 #########################################################################
 
 ###### functions ########################################################
@@ -72,7 +74,7 @@ function msglog_file { # output file lines to stderr and to logfile
    done < "$file"
 }
 
-function set_wdir {  # wdir is just the directory name, wdir_path is the fullpath uptp and including the directory name wothout a slash at the end
+function set_wdir {  # wdir is just the directory name, wdir_path is the fullpath upto and including the directory name without a slash at the end
    unset wdir; unset wdir_path
 
    # check if we are in the hfmt dir and move up to its parent, so things work, and we are not penalized for starting a run in the hfmt directory
@@ -81,6 +83,8 @@ function set_wdir {  # wdir is just the directory name, wdir_path is the fullpat
       msg moving up to $(pwd)
    fi
 
+   exec_path=$(pwd)
+
    cand=$(ls -td hfmt_[0-9]*/ 2>/dev/null | head -1)  # get most recent of this format, ie hfmt_ followed by a number
    [ ! -z "$cand" ] && [ -d $cand ] && wdir=$cand
 
@@ -88,6 +92,13 @@ function set_wdir {  # wdir is just the directory name, wdir_path is the fullpat
 
    # wdir is just the directory name. set wdir_path to the complete path of wdir
    [ ! -z $wdir ] && wdir_path=$(realpath $wdir)
+}
+
+function nocomment {
+   awk '/^#/{next}{print}' $@
+}
+function noncomment {
+   nocomment $@
 }
 
 function is_number { # checks if argument is a positive integer, return value is true if a number false otherwise
@@ -118,6 +129,20 @@ function get_fastx_basename {  # so we can use $() to assign result to var with 
 function is_fastx {  # set fastx var if it is a fastq or fasta looking file
   [ -z "$1" ] && fastx="" && return 0
   fastx=$(bawk '$name!=""{print "fastx"}{exit}' $1)
+}
+
+function numrecs {
+   bioawk -c fastx '
+     NR==1{LastFilename = FILENAME}
+     FNR==1{if(NR>1){print LastFilename": " FileRecs} FileRecs=0; LastFilename=FILENAME}
+
+     {FileRecs++}
+
+     END{if(FNR!=NR){printf "%s: ", FILENAME}; print FileRecs}' "$@"
+}
+
+function sorttab { # can never remember how to use the tab as the separator, so put in function
+   sort -t$'\t' $@
 }
 
 # function to set blast major and minor version number variables
@@ -154,6 +179,17 @@ function get_mitfi_entry_info { # called with $1 mitfi file path, $2 trna letter
    tbeg=$(get_mitfi_entry_col $1 $2 2)
    tend=$(get_mitfi_entry_col $1 $2 3)
    tentry=$(get_mitfi_entry_col $1 $2 0)
+}
+
+function search_OL {  # specify fasta file and output dir if not the cm_search result
+   local fasta=$1
+   local cm_model=${src_dir}/models/OL.cm
+   [ -z $fasta ] && fasta=${wdir_path}/mito_hifi_recs.fasta
+
+   local outdir=$2
+   [ -z $outdir ] && outdir=$cm_dir
+
+   cmsearch --noF4b --cpu 1 --notextw -E 0.01 --mxsize 80000 --tblout ${outdir}/OL.tbl $cm_model $fasta >${outdir}/OL.cmout
 }
 
 # give duration of seconds in HMS or DHMS format

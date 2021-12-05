@@ -11,11 +11,12 @@
 
 mitfi=$1
 [ ! -s "$mitfi" ] && mitfi=mito_hifi_recs.mitfi
+[ ! -s "$mitfi" ] && msg.sh "add_goosehairpin_to_mitfi: can not find $mitfi" && exit 1
 
 fasta=$2
-[ -z "$fasta" ] && fasta=mito_hifi_recs.fasta
-[ ! -s "$fasta" ] && fasta=../mito_hifi_recs.fasta
-[ ! -s "$fasta" ] && msg.sh "add_goosehairpin_to_mitfi: can not find $mitfi" && exit 2
+[ -z $fasta ] && fasta=mito_hifi_recs.fasta
+[ ! -s $fasta ] && fasta=../mito_hifi_recs.fasta
+[ ! -s $fasta ] && msg.sh "add_goosehairpin_to_mitfi: can not find $fasta" && exit 2
 
 awk '
 

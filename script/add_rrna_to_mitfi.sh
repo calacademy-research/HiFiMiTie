@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# modify to handle OL.cm as well as the 2 rrnas
+
 : '
 m64044_210611_022728/29623447/ccs     -         rrnS                 -          cm        1      899     1829     2803      +    no    1 0.45  16.6  710.0    1e-181 !
 
@@ -13,19 +15,23 @@ rrna=$1
 mitfi=$2
 [ -z $mitfi ] && mitfi=mito_hifi_recs.mitfi
 
-descrip=$(echo $rrna | awk '{print ($1 ~ "L") ? "16S_rRNA.cm" : "12S_rRNA.cm"}')
+descrip=$(echo $rrna | awk '{descr = ($1 ~ "L") ? (($1 ~ "OL.tbl") ? "OL.cm" : "16S_rRNA.cm") : "12S_rRNA.cm"; print descr}')
 
 awk -v descrip=$descrip '
    FNR==NR && /^#/{next}
-   FNR==NR {
+   FNR==NR && !($1 in S_ar) {
       recid = $1
       cmpl = ($11=="no") ? "complete" : $11 "_trunc"
-      S_row = sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s", $1, $8, $9, $15, $16, cmpl, $3, descrip, $10)
+      s = int($8); e = int($9); if (s > e){t=s; s=e; e=t} # flip them
+
+      S_row = sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s", $1, s, e, $15, $16, cmpl, $3, descrip, $10)
 
       S_ar[recid] = S_row
-      S_start[recid] = int($8)
-      S_end[recid] = int($9)
+      S_start[recid] = s
+      S_end[recid]   = e
+   }
 
+   FNR==NR {
       next
    }
 

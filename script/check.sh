@@ -54,14 +54,16 @@ check_for_program mitfi.sh
 check_for_program mafft
 check_for_program bioawk_cas
 check_for_program bawk
-check_for_program nocomment
+# check_for_program nocomment  # moved to shared.sh
+check_for_program seqkit
 check_for_program seqfold
-check_for_program numrecs
+# check_for_program numrecs  # moved to shared.sh
 check_for_program trf
-check_python_pgm  edlib_str.py "actg" "actg"
-check_for_program mitodb_update.sh
 check_for_program multi_mitfi.sh
+check_python_pgm  edlib_str.py "actg" "actg"
 check_python_pgm  mito_analyze.py
+check_for_program mitodb_update.sh
+check_for_program convert_hfmt_anno_to_gff.sh
 check_for_program consensus_from_fasta_alignment.sh
 # check_for_program missing_program_example
 

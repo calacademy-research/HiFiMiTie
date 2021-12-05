@@ -17,6 +17,7 @@ cmdir_path=$wdir_path/$cmdir
 pfx=rrna
 tbl_12S=${pfx}_rrnS.tbl
 tbl_16S=${pfx}_rrnL.tbl
+OH_blast_path=$wdir_path/blast_results/OH_blast_to_cand_recs.tsv
 
 ######################################################################
 #                       function definitions                         #
@@ -30,6 +31,11 @@ function search_12S_16S {
    mv ${wdir_path}/${pfx}_* $cmdir_path/
 
    msglog_module "$tbl_12S $tbl_16S created in $cmdir"
+}
+
+function do_OL_search {
+   search_OL
+   [ -s "${cmdir_path}/OL.tbl" ] && msglog_module "OL.tbl created in $cmdir"
 }
 
 # look for all the trna sequences using cm_search
@@ -73,6 +79,8 @@ function create_cm_anno {
    ${script_dir}/add_goosehairpin_to_mitfi.sh          | \
     ${script_dir}/add_rrna_to_mitfi.sh rrna_rrnS.tbl - | \
     ${script_dir}/add_rrna_to_mitfi.sh rrna_rrnL.tbl - | \
+    ${script_dir}/add_rrna_to_mitfi.sh OL.tbl        - | \
+    ${script_dir}/add_OH_to_mitfi.sh $OH_blast_path  - | \
     awk '/^#header/{if(NR==1)next; $0="#"} {print}'    | \
     add_dist_from_last > mito_hifi_recs.cm_anno
 
@@ -98,15 +106,20 @@ function create_trna_right_neighbor_matrix {
 }
 
 function goosehairpin_trnaset {
-   awk 'NR==1 {
+   awk '
+      function trna_prev(p) {  # passes in i-1 and we return $p unless it is OH where we will return $(p-1)
+         return ($p != "OH") ? $p : $(p-1)
+      }
+
+      NR==1 {
       for (i=1;i<=NF;i++) {
          if ($i=="gh") {
             if (i==NF)  # P F case
-               print $(i-1), $1
+               print trna_prev(i-1), $1
             else if (i==1) # should not happen but just to cover edge case
-               print $NF, $2
+               print trna_prev(NF), $2
             else # T P case
-               print $(i-1), $(i+1)
+               print trna_prev(i-1), $(i+1)
             exit
          }
       }
@@ -172,6 +185,7 @@ function count_and_record_gh_recs {
 ##########################################################################
 
 run_if_no_file search_12S_16S ${cmdir_path}/$tbl_16S
+run_if_no_file do_OL_search ${cmdir_path}/OL.tbl
 run_if_no_file tRNA_searches ${cmdir_path}/mito_hifi_recs.mitfi
 
 if [ -s ${cmdir_path}/mito_hifi_recs.mitfi ]; then
@@ -182,3 +196,4 @@ else
 fi
 
 #########################################################################
+

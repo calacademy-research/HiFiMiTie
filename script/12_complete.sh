@@ -26,6 +26,9 @@ function make_chosen_mito_blastdb {
 function anno_file_name {
    echo $complete_dir/mitochondrion.anno
 }
+function gff_file_name {
+   echo $complete_dir/mitochondrion.gff
+}
 
 function feat_output_file {
    echo $complete_dir/mito_feature_matches.tsv
@@ -86,6 +89,22 @@ function add_anno_link {
    [ ! -s $link_name ] && [ -s $(anno_file_name) ] && ln -s complete/$(basename $(anno_file_name)) $link_name
 }
 
+function add_gff_link {
+   local gff_base=$(basename $(gff_file_name))
+   local link_name=${wdir}/$gff_base
+
+   [ ! -s $link_name ] && [ -s $(gff_file_name) ] && ln -s complete/$gff_base $link_name
+}
+
+function make_gff_file {
+   [ ! -s $(anno_file_name) ] && return
+
+   local anno=$(anno_file_name)
+   local gff=$(gff_file_name)
+
+   convert_hfmt_anno_to_gff.sh $anno >$gff
+}
+
 function create_anno_file {
    cm_anno=${wdir}/mito_msa.cm_anno
    [ ! -s $cm_anno ] && msglog_module "could not find $cm_anno" && return 1
@@ -108,6 +127,10 @@ function create_anno_file {
    } ' <(insert_pcg_into_cm_anno) > $(anno_file_name)
 
    add_anno_link
+
+   make_gff_file
+   add_gff_link
+
    make_anno_symbol_file
 
    msglog_module "$(basename $(anno_file_name)) created"
@@ -167,10 +190,13 @@ function make_source_dir_links_and_file {
    local mito=$complete_dir/$name
    local anno=mitochondrion.anno
    local anno_path=$complete_dir/$anno
+   local gff=mitochondrion.gff
+   local gff_path=$complete_dir/$gff
    local note_file=mito_note.txt
 
-  [ ! -s $name ] && [ -s $mito ] && ln -s $mito
+  [ ! -s $name ] && [ -s $mito ]      && ln -s $mito
   [ ! -s $anno ] && [ -s $anno_path ] && ln -s $anno_path
+  [ ! -s $gff ]  && [ -s $gff_path ]  && ln -s $gff_path
 
   [ ! -s $note_file ] && basic_note > $note_file
 }
