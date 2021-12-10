@@ -23,7 +23,7 @@ feature_output_file=${wdir}/top_match_feature_sequences.fasta
 
 function select_feature_IDs {
    unset IDs
-   [ ! -f $binfile ] && msglog "[select_mito_features.sh]: ${wdir}/top_mito_species_match_coverage.bins not found" && exit 2
+   [ ! -f $binfile ] && msglog_module "${wdir}/top_mito_species_match_coverage.bins not found" && exit 2
 
 #   IDs=$(head -n1 $binfile)
    IDs=$(awk '{sub("  *##.*","")}{print; exit}' $binfile)

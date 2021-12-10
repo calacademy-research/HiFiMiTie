@@ -13,7 +13,7 @@ dir=$(dirname $(realpath $0))
 function is_command {
    awk -v chk=$cmd 'BEGIN{
       cmds="init\trun\tcheck\tsettings\tgettaxid\taddfiles\tclearfiles\tblast_to_mito\tpull_fofn_cand_recs\tselect_mito_features\tblast_features\t"
-      cmds = cmds "rrna_cmsearch\tsplit_recs_into_sets\tassemble_mito\tassemble_w_megahit\tassemble_w_mafft_and_consensus\tcompare_assemblies\tassemble_CR\tcomplete\t"
+      cmds = cmds "rrna_cmsearch\tCR_analysis\tsplit_recs_into_sets\tassemble_mito\tassemble_w_megahit\tassemble_w_mafft_and_consensus\tcompare_assemblies\tassemble_CR\tcomplete\t"
       cmds = cmds "make_mito_rec_cand_tsv\trna_search\ttest\t"
 
       cmdchk = chk "\t"

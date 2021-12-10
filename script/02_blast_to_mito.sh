@@ -96,12 +96,49 @@ function make_candidate_set {
    $cand_script ${out_dir}/mito_*.tsv
 }
 
-# if we have the tsv files already complete, then we will skip the rest
-blasting_completed && msg "blast tsv files of HiFi reads already created" && exit 0
+function candidate_set_made {
+   local no_rpt_tsv=$1
+   local tsv=${wdir}/mito_rec_candidates.tsv
+   local bins=${wdir}/top_mito_species_match_coverage.bins
 
-# do the work, blast HiFi reads to mitogenomes
-set_blast_major_minor
-do_fofn_blast
+   [ -z $no_rpt_tsv ] && [ -s $tsv ] && msg "mito_rec_candidates.tsv already created"
+   [ -s $bins ] && msg "top_mito_species_match_coverage.bins already created"
 
-# based on matches of the reads to the mitogenomes pull out the records that are likely this organism mitogenome reads
-make_candidate_set
+   [ -s $tsv ] && [ -s $bins ] && return 0
+
+   return 1  # one or two of the files we need are not made
+}
+
+function combine_tsvs {
+   local tsv=${wdir}/mito_rec_candidates.tsv
+   local msgfunc
+   local addtl
+
+   if [ ! -s $tsv ]; then
+      make_mito_rec_candidates_tsv  # in shared.sh
+      msgfunc="msglog_module"
+   else
+      msgfunc="msg"
+      addtl="already "
+   fi
+
+   if [ -s $tsv ]; then
+      no_rpt_tsv="no_rpt_tsv"
+      local nl=$(grep -c "^" $tsv)
+      $msgfunc "mito_rec_candidates.tsv ${addtl}created with $nl entries"
+   fi
+}
+
+if blasting_completed; then
+   msg "blast tsv files of HiFi reads already created"
+else # do the work, blast HiFi reads to mitogenomes
+   set_blast_major_minor
+   do_fofn_blast
+fi
+
+blasting_completed && combine_tsvs  # will combine them if file not already created
+
+# based on matches of the reads to the mitogenomes, combine into a single tsv and bin the matches to the various species matched
+if ! candidate_set_made $no_rpt_tsv; then
+   make_candidate_set
+fi

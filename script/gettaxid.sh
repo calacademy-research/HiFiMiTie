@@ -14,6 +14,7 @@ source $(dirname $(realpath $0))/shared.sh # sets src_dir, wdir, msglog, is_numb
 
 taxtok=$1
 set_mitodb  # defined in shared.sh, sets mitodb_path
+confirmation_timeout=60  #  presume Y if we wait this long
 
 function view_mitogenome_names {
    tid=$1
@@ -31,7 +32,8 @@ while true; do
       msg "taxid $taxtok has $num_mitogenomes mitogenomes in $mitodb_path matching one of the $num_ids taxids associated with it. These $num_mitogenomes will be used to limit the mitogenome search.\n"
 
       while true; do   # reask if V used to view names of the mitogenomes or an invalid option is used
-         read -p "OK [Y|N|V]? " resp; firstCharUC_resp
+         read -t $confirmation_timeout -p "OK [Y|N|V]? " resp; ret_code=$?; firstCharUC_resp
+         [ $ret_code -gt 128 ] && resp="Y" && echo $resp  # it is Y if we time out
          ( [ "$resp" == "Y" ] || [ "$resp" == "N" ] ) && break
          [ "$resp" == "V" ] && view_mitogenome_names "$taxtok"
       done

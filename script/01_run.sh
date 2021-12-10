@@ -26,8 +26,6 @@ function thread_setting {
       update_setting "threads" $threads
       msglog_module "maximum thread usage set to $threads"
    fi
-
-   # msg ""
 }
 
 function show_pipeline_time {
@@ -77,8 +75,13 @@ function report_step {
    fi
 }
 
+# stop_run_file is defined in shared.sh
+function check_to_stop_run { # check for the file stop_run in the hfmt wdir, if it is there the caller will top the pipeline from running
+   [ -s $wdir/$stop_run_file ] && return 0
+   return 1
+}
+
 step_num=1
-export stop_run="continue"
 
 function run_step {
    step=$1
@@ -89,8 +92,10 @@ function run_step {
    local start_step=$(date +%s)
    $(get_script $step)
 
-   if [ "$stop_run" = "stop"  ]; then
-      msglog_module "pipeline stopped after step $step"
+   if check_to_stop_run; then
+      msglog_module "pipeline stopped after step $step due to:\n"
+      msglog_file $wdir/$stop_run_file
+      msglog ""
       exit $step_num
    fi
 
@@ -102,6 +107,7 @@ function run_step {
 
 function begin_run {
 
+   clear_stop_run
    thread_setting
 
    local max_step=$(get_setting_or_default "step" 1)
@@ -154,4 +160,5 @@ run_step assemble_CR
 # 12 complete the assembly
 run_step complete
 
+# 13 show the time it took
 show_pipeline_time

@@ -51,10 +51,11 @@ ls ${this_dir}/shared.sh >/dev/null && echo -e shared.sh"   \t"${this_dir}
 check_for_program blastn
 check_for_program cmsearch
 check_for_program mitfi.sh
-check_for_program mafft
+#check_for_program mafft  # this is in the scripts dir now
 check_for_program bioawk_cas
 check_for_program bawk
 # check_for_program nocomment  # moved to shared.sh
+check_for_program seqtk
 check_for_program seqkit
 check_for_program seqfold
 # check_for_program numrecs  # moved to shared.sh

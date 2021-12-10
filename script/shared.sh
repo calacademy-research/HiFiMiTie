@@ -13,14 +13,17 @@ src_dir=$(dirname $(realpath $(which hifimitie) ) )
 shared_loaded="true"
 
 # replace these the lines in usage.sh when the title or version number changes
-hfmt_version=0.01
-hfmt_version_date=15-Oct-2021
+hfmt_version=0.03
+hfmt_version_date=05-Dec-2021
 hfmt_title="HiFiMiTie version $hfmt_version -- Find & Analyze Metazoan Mitochondria from HiFi reads"
 
 script_dir=${src_dir}/script
 module=$(basename $(realpath $0) .sh | sed "s/^[0-9][0-9]_//")
 
 data_dir=${src_dir}/data
+
+# when this file is created in wdir via function stop_run, the run command will stop after the current step
+stop_run_file="STOP_RUN_DUE_TO_ERROR"
 
 : path from which we run this is in $exec_path
 
@@ -192,6 +195,16 @@ function search_OL {  # specify fasta file and output dir if not the cm_search r
    cmsearch --noF4b --cpu 1 --notextw -E 0.01 --mxsize 80000 --tblout ${outdir}/OL.tbl $cm_model $fasta >${outdir}/OL.cmout
 }
 
+function make_mito_rec_candidates_tsv { # make the combined candidate tsv from the individual tsvs in hifi_mito_matches
+   local tsv_recs="$@"
+   local out_dir=${wdir}/hifi_mito_matches
+
+   [ -z "$tsv_recs" ] && tsv_recs=${out_dir}/*.tsv
+   [[ ! "$tsv_recs" == *"hifi_mito_matches/"* ]] && tsv_recs=${out_dir}/*.tsv
+
+   sorttab -k1,1 -k12,12nr $tsv_recs | tophit | awk '$NF>9' | sorttab -k17,17nr > ${wdir}/mito_rec_candidates.tsv
+}
+
 # give duration of seconds in HMS or DHMS format
 function pprt_seconds {
    awk -v seconds=$1 '
@@ -344,6 +357,16 @@ function set_dir_vars {  # eventually should set them all here, for now just som
    compare_dir=${wdir}/compare_megahit_msa
    trf_dir=${cr_dir}/trf_output
    complete_dir=${wdir}/complete
+}
+
+function stop_run {
+   reason="$@"
+   [ -z "$reason" ] && reason="unspecified reason to stop"
+
+   echo "$reason" > $wdir/$stop_run_file
+}
+function clear_stop_run {  # delete the file so we can try agin
+   [ -f $wdir/$stop_run_file ] && rm $wdir/$stop_run_file
 }
 
 ############################################################################

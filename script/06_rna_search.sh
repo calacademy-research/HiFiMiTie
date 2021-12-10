@@ -34,6 +34,7 @@ function search_12S_16S {
 }
 
 function do_OL_search {
+   cd $exec_path
    search_OL
    [ -s "${cmdir_path}/OL.tbl" ] && msglog_module "OL.tbl created in $cmdir"
 }

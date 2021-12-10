@@ -62,10 +62,11 @@ awk -v show_first=$show_first '
       order[++o] = show_first; delete trna[show_first]
       for(cur=show_first; cur in right_neighbor; cur = mf) {
          mf = most_freq_neighbor(cur)
-         if (mf == show_first) {
+         if (mf == show_first || mf in seen) {
             break
          }
          order[++o] = mf
+         seen[mf]++
          delete trna[mf]
       }
       for (t in trna) { # add any we did not hit naturally

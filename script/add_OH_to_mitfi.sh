@@ -5,17 +5,18 @@
 
 OH_blast_file=$1
 mitfi=$2
+min_score_for_OH=250  # kludgy way to throw out the OH look alikes hovering over 12S, we'll try for better method later hopefully
 
 [ ! -s $OH_blast_file ] && exit 0
 # [ ! -s $mitfi ] && echo "No mitfi file found for inserting OH lines" && exit 1
 
-awk '
+awk -v min_score_for_OH=$min_score_for_OH '
    BEGIN{FS="\t"; OFS="\t"}
    FNR==NR {
-      if ($1 ~ "^#") next
-      if ($1 in OH_line) next
       score = $12
-      if (score < 200) next
+
+      if ($1 ~ "^#" || $1 in OH_line || score < min_score_for_OH)
+         next
 
       sub(":.*","",$2)
       OH_line[$1] = sprintf("%s \t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s", $1, $7, $8, $12, $11, ".", "OH", "blastn", "+")

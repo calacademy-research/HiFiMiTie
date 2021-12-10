@@ -182,8 +182,8 @@ msa=mito_msa.fasta
 msa_path=${wdir}/$msa
 
 # make sure the assemblies are there to compare
-[ ! -s $mega_path ] && msglog_module "Could not find $mega for comparison with $msa" && return 2
-[ ! -s $msa_path ]  && msglog_module "Could not find $msa for comparison with $mega" && return 3
+[ ! -s $mega_path ] && msglog_module "Could not find $mega for comparison with $msa" && exit 2
+[ ! -s $msa_path ]  && msglog_module "Could not find $msa for comparison with $mega" && exit 3
 
 mega_len=$(mitolen $mega_path)
 msa_len=$(mitolen $msa_path)
