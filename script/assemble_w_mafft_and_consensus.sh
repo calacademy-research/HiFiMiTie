@@ -304,12 +304,25 @@ function check_for_tandem_repeats {
    popd
 }
 
+# 11Aug2022 this currently uses gh_succ_trna and gh_prev_trna when if missing defaults as F P
+# gh is often not found so this is flawed. what we will do here is set these from more rational presumptions if they
+# have not already been set. also later on we may use OH setting alone or in tandem with gh
+# but always need to handle possibility than only first_trna and last_trna is set (and we may expand to all 12S for last_trna later)
+function clena_up_cr_settings {
+   gh_succ=$(get_setting gh_succ_trna)
+   gh_prev=$(get_setting gh_prev_trna)
+
+   [ -z $gh_succ ] && update_setting gh_succ_trna $(get_setting_or_default first_trna F)
+   [ -z $gh_prev ] && update_setting gh_prev_trna $(get_setting_or_default last_trna E)
+}
+
 ###############################################################################
 #                                do the work                                  #
 ###############################################################################
 
 make_dirs
 set_seq_filenames
+clena_up_cr_settings # 11Aug2022
 
 run_if_no_file noop $path_consensus_trna_to_end
 [ ! -s $path_consensus_trna_to_end ] && run_mafft_and_consensus $fasta_trna_to_end

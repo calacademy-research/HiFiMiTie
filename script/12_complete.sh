@@ -154,17 +154,24 @@ function blast_features_to_chosen_mito {
 
 function handle_msa_choice {
    local msa=$wdir/mito_msa.fasta
+   local megahit=$wdir/mito_megahit.fasta
    local name=mitochondrion.fasta
    local mito=$complete_dir/$name
 
    if [ ! -s $mito ]; then
 
-      msglog_module "msa consensus mitochondrion chosen as best representative"
+      if [ ! -s $msa ] && [ -s $megahit ]; then  # missing msa but we have a megahit: this needs more checks
+         chosen=$megahit
+         msglog_module "megahit consensus mitochondrion chosen as best representative"
+      else
+         chosen=$msa
+         msglog_module "msa consensus mitochondrion chosen as best representative"
+      fi
 
-      [ ! -s $msa ] && msglog_module "$msa could not be found" && return 1
+      [ ! -s $chosen ] && msglog_module "$chosen could not be found" && return 1
 
       mkdir_if_needed $complete_dir
-      cp -a -H $msa $mito && msglog_module "$name created"
+      cp -a -H $chosen $mito && msglog_module "$name created"
    else
       msg "$name already created"
    fi

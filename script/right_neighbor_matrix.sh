@@ -13,13 +13,40 @@ awk -v show_first=$show_first '
    BEGIN{OFS="\t"; show_first = toupper(show_first); sp = " "}
    function most_freq_neighbor(t) {
       biggest_freq = 0; most_freq = ""
-      for (n in right_neighbor[t]) {
-         if (right_neighbor[t][n] > biggest_freq) {
-            biggest_freq = right_neighbor[t][n]
-            most_freq = n
+      if (t in right_neighbor) {
+         for (n in right_neighbor[t]) {
+            if (right_neighbor[t][n] > biggest_freq) {
+               biggest_freq = right_neighbor[t][n]
+               most_freq = n
+            }
          }
       }
       return most_freq
+   }
+   function prt_order() {
+      for(i=1; i<=o; i++)
+         printf("%s ", order[i])
+      printf("\n")
+   }
+   function insert_val_before_this_in_order(val, rt_neighbor) {
+      num_items=length(order)
+      n = 1
+      for(i=1; i<=num_items; i++) { # copy items before we see rt_neighbor into new array
+         if(order[i] != rt_neighbor)
+           nord[n++] = order[i]
+         else
+            break
+      }
+      if(order[i] == rt_neighbor) # insert val here
+         nord[n++] = val
+      for(; i<=num_items; i++) {
+         nord[n++] = order[i]
+      }
+      delete order
+
+      nord_len = length(nord)
+      for(n=1; n <= nord_len; n++)
+         order[n] = nord[n]
    }
 
    # skip comment and low quality hits
@@ -69,8 +96,16 @@ awk -v show_first=$show_first '
          seen[mf]++
          delete trna[mf]
       }
-      for (t in trna) { # add any we did not hit naturally
-         order[++o] = t
+      for (t in trna) { # any we did not hit naturally, see what their neighbor would be
+         # order[++o] = t
+         mf = most_freq_neighbor(t)
+         if(mf!="" && biggest_freq >= 8) { # insert it into the order before the mf value
+            if(mf == show_first) # append to end
+               order[++o] = t
+            else # insert t before mf
+               insert_val_before_this_in_order(t, mf)
+            o = length(order)
+         }
          delete trna[t]
       }
 

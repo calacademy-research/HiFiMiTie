@@ -30,7 +30,7 @@ function check_input_files {
 # TTO DO: as above states
 
 qcov_min=60
-qcov_at_least=10
+qcov_at_least=50
 FILTER_OUT_RECS_LESS_THAN_THIS_QUERY_COVERAGE=$qcov_min
 KEEP_RECS_WITH_THIS_QUERY_COV=$qcov_min
 

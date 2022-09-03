@@ -85,9 +85,10 @@ function set_mito_code_from_match {
    codeFromAccn=$(get_script "mitoCodeFromAccnOrTaxid")
    top_accn=$(awk '{print $1; exit}' ${wdir}/top_mito_species_match_coverage.bins)
    code_rslt=$($codeFromAccn $top_accn)
+
    mito_code=$(echo $code_rslt | awk '{print int($1)}')
 
-   [ ! -z "$code_rslt" ] && msglog_module "top accn info: $code_rslt"
+   [ ! -z "$code_rslt" ] && msglog_module "mito code from taxid: $code_rslt"
    [ -z "$mito_code" ] && mito_code=5
    msglog_module "mito code chosen: " $mito_code
 
@@ -102,4 +103,5 @@ function set_mito_code_from_match {
 
 [ ! -s ${wdir}/top_mito_species_match_coverage.bins ] && make_top_mito_species_match_coverage.bins
 
-[ -s ${wdir}/top_mito_species_match_coverage.bins ] && set_mito_code_from_match
+# 22Jul2022 no need for this, it is now done in the init step when the taxid is confirmed
+# [ -s ${wdir}/top_mito_species_match_coverage.bins ] && set_mito_code_from_match

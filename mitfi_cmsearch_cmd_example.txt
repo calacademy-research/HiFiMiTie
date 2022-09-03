@@ -1,0 +1,1 @@
+/ccg/bin/MitoFinder/mitfi/cmsearch --fil-no-hmm --fil-no-qdb -g /home/ccg-share/bin/MitoFinder/mitfi/models/Metazoa_F.cm 8.tmpfa 

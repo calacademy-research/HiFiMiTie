@@ -55,6 +55,10 @@ function run_cmsearch {
    tbl=$1
    cmout=$(basename $tbl .tbl).cmout
 
+   # 08Aug2022 could be lots of sequences use what is available
+   local cpu_num=$threads
+   [ -z $cpu_num ] && cpu_num=1
+
    cm=$2
    # do global search first
    # cmsearch -g --tblout $tbl $cm $mito_fasta >/dev/null
@@ -63,7 +67,7 @@ function run_cmsearch {
    # ! have_tbl_hit $tbl && cmsearch --tblout $tbl $cm $mito_fasta >/dev/null
 
    # these rrna settings were determined by looking at the mitos2 cmout output files
-   cmsearch --noF4b --cpu 1 --notextw -E 0.01 --mxsize 80000 --tblout $tbl $cm $mito_fasta > $cmout
+   cmsearch --noF4b --cpu $cpu_num --notextw -E 0.01 --mxsize 80000 --tblout $tbl $cm $mito_fasta > $cmout
 }
 
 cd $wdir_path

@@ -51,9 +51,17 @@ function tRNA_searches {
    [ ! -s ${cmdir_path}/mito_hifi_recs.mitfi ] && msglog_module "Problem creating mito_hifi_recs.mitfi in $cmdir"
 }
 
-function add_dist_from_last {
+function add_dist_from_last { # also cleans up headers
    awk '
       BEGIN{FS="\t"; OFS="\t"}
+
+      /^#header/ {
+         if (NR==1) {print} else if (! lst_hdr) {print "#"}
+         lst_hdr = 1
+         next
+      }
+      { lst_hdr = 0 }
+
       lst==$1 { $0 = $0 "\t" $2-epos }
       lst!=$1 && NF==9 { $0 = $0 "\t." }
       { print }
@@ -61,13 +69,30 @@ function add_dist_from_last {
    '
 }
 
+function add_counts_to_settings {
+   one_liner_annos=$1
+   [ ! -s $one_liner_annos ] && return
+
+   tot_recs=$(tail -n +2 $one_liner_annos | wc -l)
+   prob_annos=$(grep -c "#" $one_liner_annos)
+
+   update_setting_if_changed "cm_tot_anno_recs" $tot_recs
+   update_setting_if_changed "cm_low_qual_annos" $prob_annos
+}
+
 function create_cm_anno_one_liners {
    one_liner=$cmdir_path/one_line_per_rec.cm_anno
    ${script_dir}/one_liner_per_cm_anno_rec.sh > $one_liner
 
-   # now make one sorted
+   # now make one sorted and also a file showing distribution counts of the starting trna or other elements per line, useful if subsampling warranted
    if [ -s $one_liner ]; then
       ${script_dir}/one_liner_per_cm_anno_rec.sh "sort" > ${one_liner}.srt
+
+      if [ -s ${one_liner}.srt ]; then # create starting element distribution file, exclude suspect lines, i.e., those with a comment char
+         dist_file=$(anno_start_item_distribution_file)
+         grep -v "#" ${one_liner}.srt | awk 'NR>1{sub("~","",$2); print $2}' | uniq -c > $dist_file
+         add_counts_to_settings ${one_liner}.srt
+      fi
    fi
 
    [ -s ${one_liner}.srt ] && msglog_module "$(basename ${one_liner}.srt) created"
@@ -77,15 +102,14 @@ function create_cm_anno_one_liners {
 function create_cm_anno {
    cd $cmdir_path
 
-   ${script_dir}/add_goosehairpin_to_mitfi.sh          | \
-    ${script_dir}/add_rrna_to_mitfi.sh rrna_rrnS.tbl - | \
-    ${script_dir}/add_rrna_to_mitfi.sh rrna_rrnL.tbl - | \
-    ${script_dir}/add_rrna_to_mitfi.sh OL.tbl        - | \
-    ${script_dir}/add_OH_to_mitfi.sh $OH_blast_path  - | \
-    awk '/^#header/{if(NR==1)next; $0="#"} {print}'    | \
-    add_dist_from_last > mito_hifi_recs.cm_anno
+   ${script_dir}/add_goosehairpin_to_mitfi.sh          |
+   ${script_dir}/add_rrna_to_mitfi.sh rrna_rrnS.tbl -  |
+   ${script_dir}/add_rrna_to_mitfi.sh rrna_rrnL.tbl -  |
+   ${script_dir}/add_rrna_to_mitfi.sh OL.tbl        -  |
+   ${script_dir}/add_OH_to_mitfi.sh $OH_blast_path  -  |
+   add_dist_from_last > mito_hifi_recs.cm_anno
 
-    msglog_module "mito_hifi_recs.cm_anno created with mitfi, goose_hairpin, 12S_rna and 16S_rna cm results"
+   msglog_module "mito_hifi_recs.cm_anno created with mitfi, goose_hairpin, 12S_rna and 16S_rna cm results"
 }
 
 # create the right neighbor matrix, ordered by most frequent neighbor seen. this will define our tRNA ordering for additonal analysis (CR etc)

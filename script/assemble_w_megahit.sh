@@ -10,8 +10,10 @@ function run_megahit {
     local mito_fasta_recs_to_assemble=mito_hifi_recs.fasta
 
     msglog_module "running megahit to assemble mito records using sequences in $mito_fasta_recs_to_assemble"
+    msglog_module "megahit -t $threads -r $mito_fasta_recs_to_assemble"
     megahit -t $threads -r $mito_fasta_recs_to_assemble
 
+    msglog_module "cd megahit_out"
     cd megahit_out
 
     # this should be name of best matching contig in the megahit.out directory
@@ -30,12 +32,19 @@ function run_megahit {
     msglog_module "megahit_best.fa mito file created"
 }
 
+function remove_low_evalues {
+   awk '
+      /^#/{print;next}
+      $5 < 0.001
+   '
+}
+
 function run_mitfi_on_best {
-   # expecting to be in the megahit dir at this point
+   # expecting to be in the megahit_out dir at this point
    # this is to determine where the first tran,  Phe or Pro usually, is located so we can reorient the sequence to start at the correct tRNA
 
    msglog_module "running MiTFi to determine location of $first_trna_3let so that the sequence will start there"
-   mitfi.sh megahit_best.fa >megahit_best.mitfi
+   mitfi.sh megahit_best.fa | remove_low_evalues >megahit_best.mitfi
    msglog_module "MiTFi run on megahit_best.fa completed"
 }
 
@@ -43,12 +52,14 @@ function run_mitfi_on_best {
 
 # reorient to have it start with the first_trna, usually Phe
 function reorient_seq {
-    local mitfi_fail_msg="Could not find megahit_best.mitfi annotation file or the $first_trna_3let entry to use for reorienting the mito contig to start at $first_trna_3let$first_trna_3let"
-    [ ! -f megahit_best.mitfi ] && msglog_module $mitfi_fail_msg && exit 3
+    local mitfi_fail_msg1="Could not find megahit_best.mitfi annotation file"
+    local mitfi_fail_msg2="Could not find $first_trna_3let entry to use for reorienting the mito contig to start at $first_trna_3let"
 
-    tPhe_info=$(awk '
+    [ ! -f megahit_best.mitfi ] && msglog_module $mitfi_fail_msg1 && exit 3
+
+    tPhe_info=$(awk -v first_trna="$first_trna" '
        /^#/{next}
-       $7=="F" && start==0{
+       $7==first_trna && start==0{
           if($9!="-") {
              dir = "+"
              start = $2
@@ -63,7 +74,7 @@ function reorient_seq {
     tPhe_start=$(echo "$tPhe_info" | awk '{print $1}')
     tPhe_dir=$(echo "$tPhe_info" | awk '{print $2}')
 
-    [ "$tPhe_start" -eq 0 ] && msglog_module $mitfi_fail_msg && exit 4
+    [ "$tPhe_start" -eq 0 ] && msglog_module $mitfi_fail_msg2 && exit 4
 
     # use bioawk to make it easier to revcomp if need be
     bawk -v tPhe_start="$tPhe_start" -v tPhe_dir="$tPhe_dir" '
@@ -110,7 +121,7 @@ function run_mitfi_on_reoriented_sequence {
 
    msglog_module "Running MiTFi on the reoriented sequence."
 
-   mitfi.sh mito_megahit.fasta >$mitfi
+   mitfi.sh mito_megahit.fasta | remove_low_evalues >$mitfi
    search_12S_16S $wdir_path/megahit_out/mito_megahit.fasta $wdir_path/megahit_out
 
    [ -s $mitfi ] && add_goosehairpin_to_mitfi.sh $mitfi mito_megahit.fasta >${mitfi}_w_gh

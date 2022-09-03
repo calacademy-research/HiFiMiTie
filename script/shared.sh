@@ -192,7 +192,8 @@ function search_OL {  # specify fasta file and output dir if not the cm_search r
    local outdir=$2
    [ -z $outdir ] && outdir=$cm_dir
 
-   cmsearch --noF4b --cpu 1 --notextw -E 0.01 --mxsize 80000 --tblout ${outdir}/OL.tbl $cm_model $fasta >${outdir}/OL.cmout
+   # 08Aug2022 change from --cpu 1 to --cpu $threads
+   cmsearch --noF4b --cpu $threads --notextw -E 0.01 --mxsize 80000 --tblout ${outdir}/OL.tbl $cm_model $fasta >${outdir}/OL.cmout
 }
 
 function make_mito_rec_candidates_tsv { # make the combined candidate tsv from the individual tsvs in hifi_mito_matches
@@ -328,6 +329,10 @@ function feature_sequence_file {
    echo ${wdir_path}/top_match_feature_sequences.fasta
 }
 
+function anno_start_item_distribution_file {
+   echo ${cm_dir}/higher_qual_anno_start_item_distribution.txt
+}
+
 function set_mitodb { # 11Nov2021 use new vars for sytem settings to get mito db path
    local mitodir=$(get_setting mitodb_dir)
    local mitoname=$(get_setting mitodb_name)
@@ -341,6 +346,7 @@ function set_taxonomy_vars {
 
    fullnamelineage=${taxdmp_dir}/fullnamelineage.dmp
    taxidlineage=${taxdmp_dir}/taxidlineage.dmp
+   taxnodes=${taxdmp_dir}/nodes.dmp
 }
 
 function set_dir_vars {  # eventually should set them all here, for now just some

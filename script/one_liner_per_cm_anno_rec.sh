@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# 10Aug2022 -- add categorization of annotation for suspect one with comment at end of line
+
 right_neighbors=cm_anno_right_neighbor.matrix
 cm_anno_recs=mito_hifi_recs.cm_anno
 
@@ -26,12 +28,67 @@ dir=""
 # m64044_210818_004812/82445376/ccs_RC    1221    1294    55.22   2.305E-10       UGA     S2      Metazoa_S2.cm   -       .
 # m64044_210818_004812/82445376/ccs_RC    1297    1365    51.83   3.86E-10        GUC     D       Metazoa_D.cm    +       3
 
+function categorize_cm_annos {
+   # compare each read's annotation to the template at the top of the file
+   # also remove tildes ~, these are put in when called tRNA does not use the CM model we expect (L1 using l2.cm for example)
+
+   # annotation lines that fail a test have a comment appended that describes the reason
+   # to remove these from the list do grep -v "#"
+   anno_file=$1
+
+   awk  '
+      BEGIN {OFS = "\t"; too_few = 7} # too_few refers to number of elments annotated
+      function prepare_anno() {
+         too_many = 0 # counts number of first annotation elements in rest of annotation
+         anno = $0
+
+         # remove read name and spaces around annotation portion of line, also remove any tildes
+         sub("^[^ \t]*[ \t]*", "", anno)
+         sub("[ \t]*$", "", anno)
+         gsub("~", "", anno)
+
+         num_annotated =  split(anno, ar, " ")
+         if (num_annotated < 1)
+            return
+
+         # see if first item is reepat more than once
+         itm = ar[1]
+         for (i = 2; i <= num_annotated; i++) {
+            if(ar[i] == itm)
+               too_many++
+         }
+      }
+
+      # first line is the template
+      NR==1 {  # template line
+         prepare_anno()
+         template = anno
+         print $0
+         next
+      }
+
+      # compare lines after the first with template and perform a few other checks
+      {
+         prepare_anno()
+         found_at = index(template, anno)
+         if (found_at < 1)
+            print $0, "# T template mismatch"
+         else if (num_annotated <= too_few)
+            print $0, "# N too few items"
+         else if (too_many)
+            print $0, "# W wraps around"
+         else
+            print $0
+      }
+   ' $anno_file
+}
+
 # this will just cat them out unless $do_sort is defined and then we will sort based on first field and then remove that field from the output
 function output_results {
    if [ -z $do_sort ]; then
       cat
-   else
-      sort -k1,1n | bioawk_cas -t '{ print fldcat(2,NF) }'
+   else # we have put a number at line start to tell us how to sort, sort then remove that number when outputting result, then put categorization comment at end for suspect annos
+      sort -k1,1n | bioawk_cas -t '{ print fldcat(2, NF) }' | categorize_cm_annos
    fi
 }
 
@@ -77,7 +134,8 @@ awk -v do_sort=$do_sort '
    { addtl= (aa_sym==cm_sym) ? "" : "~" }
 
    $1!=lst {
-      p = pos_ar[sym]-3; set_spaces(p)
+      p = (sym in pos_ar) ? pos_ar[sym]-3 : length(pos_str)
+      set_spaces(p)
       pre=""; if(do_sort) pre = p "\t"
       printf("\n%s%s\t%s %s%s", pre, $1, spaces, sym, addtl);
       lst=$1

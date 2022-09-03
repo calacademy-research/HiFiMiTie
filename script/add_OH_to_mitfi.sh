@@ -7,8 +7,16 @@ OH_blast_file=$1
 mitfi=$2
 min_score_for_OH=250  # kludgy way to throw out the OH look alikes hovering over 12S, we'll try for better method later hopefully
 
-[ ! -s $OH_blast_file ] && exit 0
+# [ ! -s $OH_blast_file ] && exit 0
 # [ ! -s $mitfi ] && echo "No mitfi file found for inserting OH lines" && exit 1
+
+function cat_OH_file { # if OH file is empty output one comment line so we do not confuse mitfi with file onne
+   if [ -s $OH_blast_file ]; then
+      cat $OH_blast_file
+   else
+      echo "# no OH blast results"
+   fi
+}
 
 awk -v min_score_for_OH=$min_score_for_OH '
    BEGIN{FS="\t"; OFS="\t"}
@@ -45,4 +53,4 @@ awk -v min_score_for_OH=$min_score_for_OH '
 
    { print }
 
-' $OH_blast_file $mitfi
+' <(cat_OH_file) $mitfi

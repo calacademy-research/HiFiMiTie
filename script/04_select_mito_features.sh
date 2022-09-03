@@ -14,6 +14,8 @@ NC_033356	 ## 1 chosen for downloading of the mito feature set
 60s	   9	   6:NC_035594 Neotoma mexicana	   2:NC_035598 Peromyscus pectoralis	   1:NC_033356 Neotoma fuscipes
 '
 
+# 22Jul2022 filter out lines without sequences retrieved form mito_analyze.py. done via grep -v "^\s"
+
 ### define the names
 
 binfile=${wdir}/top_mito_species_match_coverage.bins
@@ -44,8 +46,8 @@ function retrieve_features {
 
    for query in $@; do
       msglog_module "retrieving mito features for $query"
-      msglog_module "mito_analyze.py -rec -q $query -nh | sort -k3,3n |" bioawk_cas '{print ">" $2"_"$5, $3, $4, fldcat(6,NF); print $1}' "| fold -w 120"
-      mito_analyze.py -rec -q "$query" -nh | sort -k3,3n | bioawk_cas '{print ">" $2"_"$5, $3,$4,fldcat(6,NF); print $1}' | fold -w 120
+      msglog_module "mito_analyze.py -rec -q $query -nh | grep -v "^\s" | sort -k3,3n |" bioawk_cas '{print ">" $2"_"$5, $3, $4, fldcat(6,NF); print $1}' "| fold -w 120"
+      mito_analyze.py -rec -q "$query" -nh | grep -v "^\s" | sort -k3,3n | bioawk_cas '{print ">" $2"_"$5, $3,$4,fldcat(6,NF); print $1}' | fold -w 120
    done
 }
 

@@ -16,6 +16,18 @@ taxtok=$1
 set_mitodb  # defined in shared.sh, sets mitodb_path
 confirmation_timeout=60  #  presume Y if we wait this long
 
+# 22Jul2022 new way to get code using taxid and nodes.dmp file where mito code is in the 9th field of the record where taxid is field 1
+function set_mito_code_from_taxid {
+   local taxid=$1
+   local mito_code_script=$(get_script "mito_genetic_code.sh") # script in script dir searcs nodes.dmp for taxid and returns mito code number
+
+   local mito_code=$($mito_code_script $taxid $taxnodes)
+   msglog_module "mito code from taxid $taxid: $mito_code"
+
+   # now remember the code in the ${wdir_path}/settings file
+   update_setting_if_changed "code" $mito_code
+}
+
 function view_mitogenome_names {
    tid=$1
    (echo List of $num_mitogenomes mitogenomes associated with taxid $tid. Press Q to exit. && (blastdbcmd -db $mitodb_path -taxidlist <(make_taxidlist.sh $tid) | grep "^>")) | less -N
@@ -69,9 +81,6 @@ set_wdir
 # write 2 files, one with number that got us our list and the other the list of taxid numbers we will use for limiting the mito search
 topid_name=$(awk -F "\t" -v taxid=$taxtok '$1==taxid{print $3; exit}' $fullnamelineage)
 
-# no longer use a toptaxid file retrieve info from the settings file using get_setting
-#echo $taxtok $topid_name > ${wdir}/toptaxid
-
 make_taxidlist.sh $taxtok >${wdir}/taxidlist
 
 # log the info and also store the taxid info in the settings file
@@ -79,5 +88,9 @@ msglog_module "$topid_name mitogenomes, taxid $taxtok, chosen as search targets.
 
 update_setting "taxid"   "$taxtok"
 update_setting "taxname" "$topid_name"
+set_mito_code_from_taxid "$taxtok"  # gets it from nodes.dmp based on taxtok and puts it in settings
+
 update_setting "taxlineage" "$fullnamelineage"
+update_setting "taxnodes" "$taxnodes"
+
 update_setting "mitogenomes" $num_mitogenomes
