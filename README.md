@@ -14,7 +14,7 @@ You can see the basic pipeline in the help screen below. However, to execute the
 Example forthcoming.
 
 ```
-    HiFiMiTie version 0.01 -- Find & Analyze Metazoan Mitochondria from HiFi reads
+    HiFiMiTie version 0.04 -- Find & Analyze Metazoan Mitochondria from HiFi reads
 
     Usage: hifimitie <command> [options]
 
