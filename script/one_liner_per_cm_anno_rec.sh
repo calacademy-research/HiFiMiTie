@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 10Aug2022 -- add categorization of annotation for suspect one with comment at end of line
-
+# 06Sep2022 -- remove gh, OL and OH items for template and record to compare with. I.e., ignore those for template order comparison
 right_neighbors=cm_anno_right_neighbor.matrix
 cm_anno_recs=mito_hifi_recs.cm_anno
 
@@ -46,12 +46,20 @@ function categorize_cm_annos {
          sub("^[^ \t]*[ \t]*", "", anno)
          sub("[ \t]*$", "", anno)
          gsub("~", "", anno)
+         len1 = length(anno)
+
+         # remove gh, OL, OH from consideration
+         gsub("gh", "", anno)
+         gsub("OL", "", anno)
+         gsub("OH", "", anno)
+         gsub("  *", " ", anno)
+         len2 = length(anno)
 
          num_annotated =  split(anno, ar, " ")
          if (num_annotated < 1)
             return
 
-         # see if first item is reepat more than once
+         # see if first item is repeated more than once, that means read wraps around
          itm = ar[1]
          for (i = 2; i <= num_annotated; i++) {
             if(ar[i] == itm)

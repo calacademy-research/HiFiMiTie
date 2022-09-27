@@ -216,10 +216,11 @@ else
 
    show_basic_results >$overview
 
-   edlib_str.py $(getseq $msa_path) $(getseq $mega_path) | prt_results $show_per_line $show_all >>$overview
+   # 03Sep2022 reversing order to mega then msa,  since it was backwards from what prt_results expected
+   edlib_str.py $(getseq $mega_path) $(getseq $msa_path) | prt_results $show_per_line $show_all >>$overview
 
    show_all=1
-   edlib_str.py $(getseq $msa_path) $(getseq $mega_path) | prt_results $show_per_line $show_all >$fullseq
+   edlib_str.py $(getseq $mega_path) $(getseq $msa_path) | prt_results $show_per_line $show_all >$fullseq
 
    msglog ""
    msglog_file $overview

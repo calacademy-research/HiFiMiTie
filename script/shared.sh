@@ -12,9 +12,9 @@ src_dir=$(dirname $(realpath $(which hifimitie) ) )
 
 shared_loaded="true"
 
-# replace these the lines in usage.sh when the title or version number changes
-hfmt_version=0.03
-hfmt_version_date=05-Dec-2021
+# replace these and also the lines in usage.sh when the title or version number changes
+hfmt_version=0.04
+hfmt_version_date=04-Sep-2022
 hfmt_title="HiFiMiTie version $hfmt_version -- Find & Analyze Metazoan Mitochondria from HiFi reads"
 
 script_dir=${src_dir}/script
@@ -80,10 +80,10 @@ function msglog_file { # output file lines to stderr and to logfile
 function set_wdir {  # wdir is just the directory name, wdir_path is the fullpath upto and including the directory name without a slash at the end
    unset wdir; unset wdir_path
 
-   # check if we are in the hfmt dir and move up to its parent, so things work, and we are not penalized for starting a run in the hfmt directory
-   if [[ $(basename $(pwd)) =~ hfmt_[0-9]* ]]; then  # need double brackets so asterisk is used as wildcard in string and not for file globbing
-      cd ..
-      msg moving up to $(pwd)
+   # check if we are in hfmt dir or one of its subdirs and move up to its parent so things work, and we are not penalized for starting a run in the hfmt directory
+   if [[ $(pwd) =~ hfmt_[0-9]* ]]; then  # need double brackets so asterisk is used as wildcard in string and not for file globbing
+      hfmt_parent=$(echo $(pwd) | sed "s|/hfmt_[0-9]*.*||")
+      [ -d $hfmt_parent ] && cd $hfmt_parent && msg moving up to $(pwd)
    fi
 
    exec_path=$(pwd)
@@ -149,7 +149,7 @@ function sorttab { # can never remember how to use the tab as the separator, so 
 }
 
 # function to set blast major and minor version number variables
-# we can use this iwth version 2.12 or greater to use the new -mt_mode 1 option
+# we can use this with version 2.12 or greater to use the new -mt_mode 1 option
 # this will use the threads among the queries instead of partitioning the database search
 # with a -taxidlist in use this is probably faster
 
@@ -250,6 +250,10 @@ function set_default_threads {
 function settings_file {
    echo ${wdir_path}/settings.tsv
 }
+function tmp_settings_file {
+   echo ${wdir_path}/tmp_settings
+}
+
 
 function update_setting {
    local key=$1; local value=$2
@@ -258,13 +262,15 @@ function update_setting {
    local file=$(settings_file)
    [ ! -f $file ] && echo -e "$key\t$value" >$file && return
 
+   local tmp_settings=$(tmp_settings_file)
+
    awk -v key="$key" -v value="$value" '
       BEGIN{FS="\t"; OFS="\t"}
       $1==key{print key, value; reset=1; next}
       { print }
       END{if(!reset){print key, value}}  # was not in there, add it at the end of the file
-   ' $file > tmp_settings
-   mv tmp_settings $file
+   ' $file > $tmp_settings
+   mv $tmp_settings $file
 }
 
 function get_setting {
@@ -330,7 +336,7 @@ function feature_sequence_file {
 }
 
 function anno_start_item_distribution_file {
-   echo ${cm_dir}/higher_qual_anno_start_item_distribution.txt
+   echo ${wdir_path}/cm_results/higher_qual_anno_start_item_distribution.txt
 }
 
 function set_mitodb { # 11Nov2021 use new vars for sytem settings to get mito db path

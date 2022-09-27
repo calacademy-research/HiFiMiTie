@@ -215,17 +215,49 @@ function touch_wdir_links { # touch them unless we have finished the run, we do 
    fi
 }
 
+# set assemble_CR_result based on the annos, preferring msa if it is within 60% megahit
+function compare_annos {
+   local msa=$wdir/mito_msa.cm_anno
+   local megahit=$wdir/mito_megahit.cm_anno
+
+   local msa_score=0
+   [ -s $msa ] && msa_score=$(awk 'BEGIN{score=0.0}NR>1{score += $4}END{print score}' $msa)
+
+   local mega_score=0
+   [ -s $mega ] && mega_score=$(awk 'BEGIN{score=0.0}NR>1{score += $4}END{print score}' $megahit)
+
+
+   # get a phrase repsenting the score comparison
+   cmp_to_mega=$(echo $msa_score $mega_score | awk '
+            function abs(a){return (a<0) ? -a : a}
+
+            $1 == $2{print "equal to"; exit}
+            $1 > $2{print "greater than"; exit}
+            abs($1-$2) <= 60{print "near"; exit}
+            {print "lt"}
+        ')
+
+   if [ "$cmp_to_mega" = "lt" ]; then
+      msglog_module megahit assembly has cm_anno score of $mega_score compared to msa assembly score $msa_score.
+      update_setting_if_changed assemble_CR_result "megahit"
+   else
+      msglog_module msa assembly cm_anno score of $msa_score is $cmp_to_mega megahit score $mega_score.
+      update_setting_if_changed assemble_CR_result "msa"
+   fi
+}
+
 ###############################################################################
 
 source ${script_dir}/mito_note_file.sh
 
 mkdir_if_needed $complete_dir
 
-result="$(get_setting assemble_CR_result)"
+result=$(get_setting assemble_CR_result)
+[ -z $result ] && compare_annos && result=$(get_setting assemble_CR_result)
 
 if [ -z "$result" ]; then
    msglog_module "No result found from last step, you'll need to look at the 2 assembly comparisons and decide."
-elif [ "$result" = "msa" ]; then
+elif [ "$result" = "msa" ] || [ "$result" = "megahit" ]; then
    handle_msa_choice
 else
    msglog_module "Result \"$result\" found from last step is not recognized, you'll need to look at the 2 assembly comparisons and decide."

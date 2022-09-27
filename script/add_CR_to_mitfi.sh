@@ -57,7 +57,9 @@ else
    }
 
    $7=="gh" {if(gh_str==""){ gh_str=$0 } else{ gh_str=gh_str"\n"$0 };next}
-   CR_starts_at > 0 && $7 != "gh" { write_CR(CR_starts_at, $2-1) }  # ends one pos beofre beginning of this feature
+   CR_starts_at > 0 && $7 != "gh" && $2 > CR_starts_at {  # ends one pos before beginning of this feature
+       write_CR(CR_starts_at, $2-1)
+   }
 
    { print }
 

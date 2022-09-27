@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# modify to handle OL.cm as well as the 2 rrnas
+# modify to handle OL.cm as well as the 2 rrna
+
+# 16Sep2022s .tbl file might be empty so put a comment as part of the file strean so we have something to count as the first file
 
 : '
 m64044_210611_022728/29623447/ccs     -         rrnS                 -          cm        1      899     1829     2803      +    no    1 0.45  16.6  710.0    1e-181 !
@@ -54,4 +56,10 @@ awk -v descrip=$descrip '
    }
 
    { print }
-' $rrna $mitfi
+
+   END { # 04Sep2022 handle case where it belongs after the last line
+      if (recid in S_ar && S_start[recid] > 0) {
+         print S_ar[recid]
+      }
+   }
+' <(echo "#so file is not empty" && cat $rrna) $mitfi

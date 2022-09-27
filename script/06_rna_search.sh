@@ -17,6 +17,7 @@ cmdir_path=$wdir_path/$cmdir
 pfx=rrna
 tbl_12S=${pfx}_rrnS.tbl
 tbl_16S=${pfx}_rrnL.tbl
+cmout_16S=${pfx}_rrnL.cmout
 OH_blast_path=$wdir_path/blast_results/OH_blast_to_cand_recs.tsv
 
 ######################################################################
@@ -76,8 +77,15 @@ function add_counts_to_settings {
    tot_recs=$(tail -n +2 $one_liner_annos | wc -l)
    prob_annos=$(grep -c "#" $one_liner_annos)
 
-   update_setting_if_changed "cm_tot_anno_recs" $tot_recs
-   update_setting_if_changed "cm_low_qual_annos" $prob_annos
+   # count the reads that are candidates for having the whole non-cr sequence in them
+   local starting_trna=$(get_setting_or_default "first_trna" "F")
+   local last_trna=$(get_setting_or_default "last_trna" "P")
+   qry="^m.*${starting_trna}.*${last_trna}"
+   complete_non_cr_recs=$(grep $qry $one_liner_annos | grep -c -v "# T")  # the "# T" excludes those that do not match template
+
+   update_setting_if_changed "cm_tot_anno_recs" "$tot_recs"
+   update_setting_if_changed "cm_low_qual_annos" "$prob_annos"
+   update_setting_if_changed "cm_complete_no_cr_anno" "$complete_non_cr_recs"
 }
 
 function create_cm_anno_one_liners {
@@ -88,7 +96,8 @@ function create_cm_anno_one_liners {
    if [ -s $one_liner ]; then
       ${script_dir}/one_liner_per_cm_anno_rec.sh "sort" > ${one_liner}.srt
 
-      if [ -s ${one_liner}.srt ]; then # create starting element distribution file, exclude suspect lines, i.e., those with a comment char
+      if [ -s ${one_liner}.srt ]; then
+         # create starting element distribution file, exclude suspect lines, i.e., those with a comment char
          dist_file=$(anno_start_item_distribution_file)
          grep -v "#" ${one_liner}.srt | awk 'NR>1{sub("~","",$2); print $2}' | uniq -c > $dist_file
          add_counts_to_settings ${one_liner}.srt
@@ -159,12 +168,56 @@ function find_goosehairpin_bounding_trnas {
    [ ! -z $last_let ]  && update_setting "gh_succ_trna" $last_let
 }
 
-# create the same matrix but including 12S, 16S and potentially any found goose_hairpins, store it in cm_anno_right_neighbor.matrix
+# 06Sep2022 normally existing mito_hifi_recs.cm_anno will work to create_cm_anno_right_neighbor_matrix
+# but if there are multiple gh in the there it will not work yet
+# so for now remove the gh is the first time did not work
+function get_mito_hifi_recs_cm_anno {
+   if [ -z $filter_gh ] && [ -z $filter_OH ]; then
+      cat mito_hifi_recs.cm_anno
+   elif [ ! -z $filter_OH ]; then
+      grep -v -e gh -e OH mito_hifi_recs.cm_anno
+   else
+      grep -v gh mito_hifi_recs.cm_anno
+   fi
+}
+function cm_matrix_ok { # check to see if we had a problem by counting items in header. has to be at least what we had for the trna only version
+   ok=$(awk 'NR==1{trna_items=NF; next}
+             FNR!=NR && FNR==1{cm_anno_items=NF; exit}
+             END{if(cm_anno_items >= trna_items) print "ok"; else print "no"}
+        ' trna_right_neighbor.matrix cm_anno_right_neighbor.matrix)
+
+   if [ $ok = "no" ]; then
+      false
+   else
+      true
+   fi
+}
+
 function create_cm_anno_right_neighbor_matrix {
+   unset filter_gh; unset filter_OH
+
+   run_create_cm_anno_right_neighbor_matrix
+
+   if ! cm_matrix_ok ; then
+      msglog_module "too few items found in cm_anno_right_neighbor_matrix. rerun removing goosehairpin lines"
+      filter_gh="filter_gh"
+      run_create_cm_anno_right_neighbor_matrix
+      if ! cm_matrix_ok; then
+         msglog_module "too few items found in cm_anno_right_neighbor_matrix. rerun removing goosehairpin and OH lines"
+         filter_gh="filter_OH"
+         run_create_cm_anno_right_neighbor_matrix
+      fi
+   fi
+}
+
+# create the same matrix but including 12S, 16S and potentially any found goose_hairpins, store it in cm_anno_right_neighbor.matrix
+function run_create_cm_anno_right_neighbor_matrix {
    cd $cmdir_path
 
    starting_trna=$(get_setting_or_default "first_trna" "F")
-   ${script_dir}/right_neighbor_matrix.sh mito_hifi_recs.cm_anno $starting_trna >cm_anno_right_neighbor.matrix
+   get_mito_hifi_recs_cm_anno >tmp_cm_anno
+   ${script_dir}/right_neighbor_matrix.sh tmp_cm_anno $starting_trna >cm_anno_right_neighbor.matrix
+   rm tmp_cm_anno
 
    msglog_module "cm_anno_right_neighbor.matrix created using ${BBlue}${starting_trna}${NC} as the first tRNA."
 
@@ -178,11 +231,26 @@ function create_cm_anno_right_neighbor_matrix {
    find_goosehairpin_bounding_trnas
 }
 
+function create_full_no_cr_seq_info {
+   cd $cmdir_path
+
+   local starting_trna=$(get_setting_or_default "first_trna" "F")
+   local last_trna=$(get_setting_or_default "last_trna" "P")
+
+   ${script_dir}/extract_full_no_cr_seqs.sh one_line_per_rec.cm_anno.srt mito_hifi_recs.cm_anno $starting_trna $last_trna > $cmdir_path/full_no_cr_seq.info
+   if [ -s $cmdir_path/full_no_cr_seq.info ]; then
+      msglog_module "full_no_cr_seq.info created created"
+   elif [ -f $cmdir_path/full_no_cr_seq.info ]; then  # empty file delete it
+      rm $cmdir_path/full_no_cr_seq.info
+   fi
+}
+
 function create_matrix_and_anno_files {
-   run_if_no_file create_trna_right_neighbor_matrix    ${cmdir_path}/trna_right_neighbor.matrix
-   run_if_no_file create_cm_anno                       ${cmdir_path}/mito_hifi_recs.cm_anno
-   run_if_no_file create_cm_anno_right_neighbor_matrix ${cmdir_path}/cm_anno_right_neighbor.matrix
+   run_if_no_file create_trna_right_neighbor_matrix    $cmdir_path/trna_right_neighbor.matrix
+   run_if_no_file create_cm_anno                       $cmdir_path/mito_hifi_recs.cm_anno
+   run_if_no_file create_cm_anno_right_neighbor_matrix $cmdir_path/cm_anno_right_neighbor.matrix
    run_if_no_file create_cm_anno_one_liners            $cmdir_path/one_line_per_rec.cm_anno.srt
+   run_if_no_file create_full_no_cr_seq_info           $cmdir_path/full_no_cr_seq.info
 }
 
 function count_and_record_gh_recs {
@@ -209,7 +277,7 @@ function count_and_record_gh_recs {
 #                                                                        #
 ##########################################################################
 
-run_if_no_file search_12S_16S ${cmdir_path}/$tbl_16S
+run_if_no_file search_12S_16S ${cmdir_path}/$cmout_16S
 run_if_no_file do_OL_search ${cmdir_path}/OL.tbl
 run_if_no_file tRNA_searches ${cmdir_path}/mito_hifi_recs.mitfi
 

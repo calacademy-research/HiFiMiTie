@@ -48,8 +48,39 @@ function set_trnas_to_pull_from { # set the trna vars and sequence split msg var
    outfile1=${splitseq_dir}/${start_trna_3let}_to_end.fasta
    outfile2=${splitseq_dir}/beg_to_${end_trna_3let}.fasta
    outfile3=${splitseq_dir}/${end_trna_3let}_CR_${start_trna_3let}.fasta
+   outfile4=${splitseq_dir}/full_no_cr_seq.fasta
 
    true
+}
+
+# 04Sep2022 at some point we should replace using the blst features results for sequence splitting info
+# and move to using the results from cm_results but here will we use the cm_results to  throwout records
+# that have problems if there are still enough to work with (that test to be done later)
+function filter_reads {
+   fasta=$1
+   excludes="$splitseq_dir/excluded_from_check.txt"
+
+   local one_liner=$cm_dir/one_line_per_rec.cm_anno.srt
+
+   if [ ! -s "$one_liner" ]; then
+      cat $fasta  # no file to use for the sieve just move things along
+   else # remember those that have a comment line with a {TWN] aftern the space and we will not pass those along
+      bawk -v excludes=$excludes '
+         FNR==NR && /# [TWN]/ {
+            dont_use[$name] = $0
+         }
+         FNR==NR { next }
+
+         $name in dont_use {
+            print "skipping " dont_use[$name] > excludes
+            next
+         }
+         {
+            print ">" $name " " $comment
+            print $seq
+         }
+      ' <(prefix_gt $one_liner) $fasta
+   fi
 }
 
 function extract_seq_after_CR {
@@ -90,7 +121,7 @@ function extract_seq_after_CR {
          if (outlen > MINLEN) {
             printf(">%s_%s_to_%s %d..%d %dnt\n%s\n", $name, st, endstr, pos, slen, outlen, output)
          }
-   }' <(prefix_gt ${wdir_path}/$feature_matches) ${wdir_path}/$fasta > $outfile1
+   }' <(prefix_gt ${wdir_path}/$feature_matches) <(filter_reads ${wdir_path}/$fasta) > $outfile1
 }
 
 function extract_seq_before_CR {
@@ -119,7 +150,7 @@ function extract_seq_before_CR {
          if (outlen > MINLEN) {
             printf(">%s_beg_to_%s %d..%d %dnt\n%s\n", $name, en, 1, outlen, outlen, output)
          }
-   }' <(prefix_gt ${wdir_path}/$feature_matches) ${wdir_path}/$fasta > $outfile2
+   }' <(prefix_gt ${wdir_path}/$feature_matches) <(filter_reads ${wdir_path}/$fasta) > $outfile2
 }
 
 function extract_CR_and_flanks {
@@ -160,7 +191,27 @@ function extract_CR_and_flanks {
             printf(">%s_%s_CR_%s %d..%d %dnt\n%s\n", $name, st, en, begpos, endpos, outlen, output)
          }
       }
-   '  <(prefix_gt ${wdir_path}/$feature_matches) ${wdir_path}/$fasta > $outfile3
+   '  <(prefix_gt ${wdir_path}/$feature_matches) <(filter_reads ${wdir_path}/$fasta) > $outfile3
+}
+
+# 04Sep2022 this will be a backup if the typical extractions are not working. depends on number of recs we get
+function extract_any_full_no_nr_seqs {
+   [ ! -s $cm_dir/full_no_cr_seq.info ] && return  # nothing to do, no read had the full_no_cr portion in it
+
+   local one_liner=$cm_dir/one_line_per_rec.cm_anno.srt
+   local cm_anno=$cm_dir/mito_hifi_recs.cm_anno
+   local recs=${wdir_path}/$fasta
+
+   [ ! -s $one_liner ] && msglog_module "Could not extract full_no_cr_seqs.fasta: $one_liner not found" && return 1
+   [ ! -s $cm_anno ] && msglog_module "Could not extract full_no_cr_seqs.fasta: $cm_anno not found" && return 2
+   [ ! -s $recs ] && msglog_module "Could not extract full_no_cr_seqs.fasta: $recs not found" && return 3
+
+   $script_dir/extract_full_no_cr_seqs.sh $one_liner $cm_anno $start_trna $end_trna  $recs >$outfile4
+
+   if [ -s $outfile4 ]; then
+      nr=$(numrecs $outfile4)
+      msglog_module "$(basename $outfile4) written with $nr records"
+   fi
 }
 
 function set_done {
@@ -176,6 +227,7 @@ function make_split_sequence_files {
       run_if_no_file extract_seq_after_CR  $outfile1
       run_if_no_file extract_seq_before_CR $outfile2
       run_if_no_file extract_CR_and_flanks $outfile3
+      run_if_no_file extract_any_full_no_nr_seqs $outfile4
 
       set_done # set a done semaphore file when finished creating the extracts
    fi

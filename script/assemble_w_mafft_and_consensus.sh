@@ -85,7 +85,7 @@ function set_seq_filenames {
    fasta_beg_to_trna=$(ls $splitseq_dir/beg_*.fasta)
    fasta_CR_btw_trnas=$(ls $splitseq_dir/*_CR_*.fasta)
 
-   if [ -z $fasta_trna_to_end ] || [ -z $fasta_beg_to_trna ] || [ -z $fasta_CR_btw_trnas ]; then
+   if [ -z "$fasta_trna_to_end" ] || [ -z "$fasta_beg_to_trna" ] || [ -z "$fasta_CR_btw_trnas" ]; then
       false
    else
       true
@@ -110,6 +110,7 @@ function set_seq_filenames {
    msa_mito_fa_path=${alignasm_dir}/$msa_mito_fa
 }
 
+# DEPRECATE: this can have issues is overlaps replace with function following
 function make_consensus_of_two_non-cr_consensus_outputs {
    [ -s $path_non_cr_consensus ] && run_if_no_file noop $path_non_cr_consensus && return
 
@@ -125,6 +126,23 @@ function make_consensus_of_two_non-cr_consensus_outputs {
 
    msglog_module "consensus_from_fasta_alignment.sh $msa_out >$non_cr_consensus"
    consensus_from_fasta_alignment.sh $msa_out_path >$path_non_cr_consensus
+}
+
+# 05Sep2022 this replaces above and makes mitfi output for each and blends the 2 based on those settings
+function merge_two_non-cr_consensus_fa {
+   [ -s $path_non_cr_consensus ] && run_if_no_file noop $path_non_cr_consensus && return
+
+   msglog_module "$non_cr_consensus from $consensus_trna_to_end & $consensus_beg_to_trna"
+   [ ! -s $path_consensus_trna_to_end ] && msglog_module "$consensus_trna_to_end could not be found" && return 1
+   [ ! -s $path_consensus_beg_to_trna ] && msglog_module "$consensus_beg_to_trna could not be found" && return 1
+
+   names_from_fasta $path_non_cr_consensus
+   msglog_module "Merging $consensus_trna_to_end $consensus_beg_to_trna"
+
+   local code_setting=$(get_setting_or_default "code" "5")
+   msglog_module "merge_two_consensus_fa.sh $path_consensus_trna_to_end $path_consensus_beg_to_trna $code_setting >$path_non_cr_consensus"
+
+   $script_dir/merge_two_consensus_fa.sh $path_consensus_trna_to_end $path_consensus_beg_to_trna $code_setting >$path_non_cr_consensus
 }
 
 function mitfi_fasta {
@@ -181,6 +199,16 @@ function search_12S_16S {
    [ -s $aligncm_dir/$tbl_12S ] && [ -s $aligncm_dir/$tbl_16S ] && msglog_module "$tbl_12S $tbl_16S created in $aligncm_dir for $(basename $mito_fasta)"
 }
 
+function blast_OH_to_fasta {
+   qry=$1
+   evalue=.00001
+   output_file=$2
+   OH_db=${data_dir}/OrgRepl/OH.fas
+
+   msglog_module blastn -db OH.fas -query $qry -outfmt \"6 std staxid stitle qlen qcovhsp qcovus\" -max_target_seqs 5 -subject_besthit -evalue $evalue -num_threads $threads
+   blastn -db $OH_db -query $qry -outfmt  "6 std staxid stitle qlen qcovhsp qcovus"  -max_target_seqs 5 -subject_besthit -evalue $evalue -num_threads $threads >$output_file
+}
+
 function anno_fasta { # mitfi file and one with gh and 12S and 16S file added created
    local fasta=$1
    [ ! -s "$fasta" ] && msglog_module $fasta not found or empty && return 1
@@ -192,10 +220,14 @@ function anno_fasta { # mitfi file and one with gh and 12S and 16S file added cr
    set_fastx_basename $fasta
    local pfx=$aligncm_dir/${fastx_basename}
 
-   ${script_dir}/add_goosehairpin_to_mitfi.sh ${pfx}.mitfi $fasta | \
-   ${script_dir}/add_rrna_to_mitfi.sh ${pfx}_rrnS.tbl     -  | \
-   ${script_dir}/add_rrna_to_mitfi.sh ${pfx}_rrnL.tbl     -  | \
-   ${script_dir}/add_rrna_to_mitfi.sh ${pfx}_OL.tbl - | \
+   local OH_blast_path=${pfx}_OH.tsv
+   blast_OH_to_fasta $fasta $OH_blast_path
+
+   ${script_dir}/add_goosehairpin_to_mitfi.sh ${pfx}.mitfi $fasta |
+   ${script_dir}/add_rrna_to_mitfi.sh ${pfx}_rrnS.tbl - |
+   ${script_dir}/add_rrna_to_mitfi.sh ${pfx}_rrnL.tbl - |
+   ${script_dir}/add_rrna_to_mitfi.sh ${pfx}_OL.tbl   - |
+   ${script_dir}/add_OH_to_mitfi.sh $OH_blast_path    - |
    ${script_dir}/add_CR_to_mitfi.sh ${wdir_path}/settings.tsv - $(asmlen $fasta) > ${pfx}.cm_anno
 
    [ -s ${pfx}.cm_anno ] && msglog_module $(basename ${pfx}.cm_anno) created with rrnS, rrnL, cr and any goose hairpin added to mitfi results
@@ -308,7 +340,7 @@ function check_for_tandem_repeats {
 # gh is often not found so this is flawed. what we will do here is set these from more rational presumptions if they
 # have not already been set. also later on we may use OH setting alone or in tandem with gh
 # but always need to handle possibility than only first_trna and last_trna is set (and we may expand to all 12S for last_trna later)
-function clena_up_cr_settings {
+function clean_up_cr_settings {
    gh_succ=$(get_setting gh_succ_trna)
    gh_prev=$(get_setting gh_prev_trna)
 
@@ -322,7 +354,7 @@ function clena_up_cr_settings {
 
 make_dirs
 set_seq_filenames
-clena_up_cr_settings # 11Aug2022
+clean_up_cr_settings # 11Aug2022
 
 run_if_no_file noop $path_consensus_trna_to_end
 [ ! -s $path_consensus_trna_to_end ] && run_mafft_and_consensus $fasta_trna_to_end
@@ -334,10 +366,12 @@ run_if_no_file noop $path_consensus_CR_btw_trnas
 [ ! -s $path_consensus_CR_btw_trnas ] && run_mafft_and_consensus $fasta_CR_btw_trnas
 
 # take the 2 consensus sequences and run mafft in sensitive mode
-make_consensus_of_two_non-cr_consensus_outputs
+## make_consensus_of_two_non-cr_consensus_outputs
+# 05Sep2022 replace above with merge which relies on mitfi of the 2 consensus sequences
+merge_two_non-cr_consensus_fa
 
 # clean up the non-cr_consensus file to create the final msa_no_cr_mito.fasta, this requires the mitfi file for the consensus
-mitfi_fasta $path_non_cr_consensus
+mitfi_fasta $path_non_cr_consensus "-onlycutoff"
 path_no_cr_mitfi=$mitfi_file
 
 run_if_no_file make_no_cr_mito_fasta $msa_no_cr_mito_fa_path
