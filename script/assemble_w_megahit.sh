@@ -114,27 +114,39 @@ function search_12S_16S {
    [ -s $mh_dir/$tbl_12S ] && [ -s $mh_dir/$tbl_16S ] && msglog_module "$tbl_12S $tbl_16S created in $(basename $mh_dir) for $(basename $mito_fasta)"
 }
 
+function MiTFi_megahit {
+   msglog_module "Running MiTFi on the reoriented sequence."
+   mitfi.sh mito_megahit.fasta | remove_low_evalues >$mitfi_path
+}
+
 function run_mitfi_on_reoriented_sequence {
    local mitfi=$mitfi_path
    cm_anno=$(basename ${mitfi} .mitfi).cm_anno
    cm_anno_path=$(dirname $mitfi)/$cm_anno
+   anno_path=$(dirname $mitfi)/$(basename ${mitfi} .mitfi).anno
 
-   msglog_module "Running MiTFi on the reoriented sequence."
-
-   mitfi.sh mito_megahit.fasta | remove_low_evalues >$mitfi
+   run_if_no_file MiTFi_megahit $mitfi
    search_12S_16S $wdir_path/megahit_out/mito_megahit.fasta $wdir_path/megahit_out
 
    [ -s $mitfi ] && add_goosehairpin_to_mitfi.sh $mitfi mito_megahit.fasta >${mitfi}_w_gh
    [ -s ${mitfi}_w_gh ] && msglog_module "goose hairpin sequence information added, if any found"
 
    if [ -s megahit_out/$tbl_16S ]; then
+      asm_length=$(asmlen megahit_out/mito_megahit.fasta 2>/dev/null)
+      settings=$(settings_file)
+
       ${script_dir}/add_rrna_to_mitfi.sh megahit_out/$tbl_12S ${mitfi}_w_gh | \
       ${script_dir}/add_rrna_to_mitfi.sh megahit_out/$tbl_16S -             | \
-      ${script_dir}/add_CR_to_mitfi.sh ${wdir_path}/settings.tsv - $(asmlen megahit_out/mito_megahit.fasta) >$cm_anno_path
-
-      [ -s $cm_anno_path ] && [ -s ${mitfi}_w_gh ] && rm ${mitfi}_w_gh
+      ${script_dir}/add_CR_to_mitfi.sh $settings - $asm_length > $cm_anno_path
 
       msglog_module "$cm_anno with rrns, rrnL, cr and any goose hairpins added to mitfi results created for mito_megahit.fasta"
+
+      if [ -s $cm_anno_path ]; then  # 01Dec2022 add genes to anno
+         [ -s ${mitfi}_w_gh ] && rm ${mitfi}_w_gh
+         mito_pcg_anno.sh mito_megahit.fasta $cm_anno_path | add_header_to_anno >$anno_path
+         [ -s $anno_path ] && msglog_module "$(basename $anno_path) with genes added to $cm_anno created for mito_megahit.fasta"
+      fi
+
    fi
 }
 
@@ -144,9 +156,11 @@ function make_softlinks {
 
    # make softlink to the mitfi and other annotations in the hfmt directory
    [ ! -f $cm_anno ] && [ -s $cm_anno_path ] && ln -s $cm_anno_path $cm_anno
+   [ ! -f $anno ] && [ -s $anno_path ] && ln -s $anno_path $anno
 
    touch -h mito_megahit.fasta
-   touch -h $cm_anno
+   [ -f $cm_anno ] && touch -h $cm_anno
+   [ -f $anno ] && touch -h $anno
 }
 
 ##############################################################################
@@ -177,12 +191,14 @@ cd $wdir_path
 mitfi_path=megahit_out/mito_megahit.mitfi
 cm_anno=$(basename $mitfi_path .mitfi).cm_anno
 cm_anno_path=$(dirname $mitfi_path)/$cm_anno
+anno=$(basename $mitfi_path .mitfi).anno
+anno_path=$(dirname $mitfi_path)/$anno
 
 make_softlinks
 
 # run mitfi on the reoriented fasta to use for QA and comparison purposes
-[ -s mito_megahit.fasta ] && run_if_no_file run_mitfi_on_reoriented_sequence megahit_out/mito_megahit.mitfi
+[ -s mito_megahit.fasta ] && run_if_no_file run_mitfi_on_reoriented_sequence megahit_out/mito_megahit.cm_anno
 
 make_softlinks # this call will make the additional cm_anno link and update the other time on the fasta link
 
-msglog_module "MiTFi annotation of mito_megahit.fasta completed, results in $cm_anno"
+msglog_module "MiTFi annotation of mito_megahit.fasta completed, results in $(basename $anno_path)"

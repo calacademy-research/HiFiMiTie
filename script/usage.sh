@@ -3,8 +3,8 @@
 # separate file so we can show extensive usage / help info if we want to, without getting in way of main script
 
 cmd=$1
-hfmt_version=0.04
-hfmt_version_date=04-Sep-2022
+hfmt_version=0.05
+hfmt_version_date=01-Dec-2022
 hfmt_title="HiFiMiTie version $hfmt_version -- Find & Analyze Metazoan Mitochondria from HiFi reads [$hfmt_version_date]"
 
 # set color vars that we use or might use here

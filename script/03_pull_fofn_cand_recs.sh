@@ -234,7 +234,7 @@ function basic_rec_stats {
 
    # also write to log and settings the reason the rec was included
    filter_breakdown=$(get_candidate_filter_stats)
-   update_setting_if_changed "HiFi_read_filter_stats", $filter_breakdown
+   update_setting_if_changed "HiFi_read_filter_stats" "$filter_breakdown"
    msglog_module "$hifi_mito_recs HiFi reads promoted from $(numrecs $candidate_fasta) candidates based on these filters:"
    msglog_module "    $filter_breakdown"
 }

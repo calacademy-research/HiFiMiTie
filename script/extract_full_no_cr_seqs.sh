@@ -78,7 +78,7 @@ function get_mito_seqs {
          $1 in read_begpos {
             beg = read_begpos[$1]; end = read_endpos[$1]
             len = end - beg + 1
-            printf(">%s_%s_to_%s_%d-%d %dnt %s\n", $1, succ, prev, beg, end, len, $4)
+            printf(">%s_%s_thru_%s_%d-%d %dnt %s\n", $1, succ, prev, beg, end, len, $4)
             print substr($2, beg, len)
          }
       ' - <(bawk '{print}' $mito_seqs_fasta)

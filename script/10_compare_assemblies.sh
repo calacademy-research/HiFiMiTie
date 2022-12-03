@@ -37,6 +37,8 @@ function mitolen {
 # mito    1       68      62.69   1.938E-12       GAA     F       Metazoa_F.cm    +
 function get_msa_anno {
    local msa_anno=${wdir_path}/mito_msa.cm_anno
+   [ -s ${wdir_path}/mito_msa.anno ] && msa_anno=${wdir_path}/mito_msa.anno  # 02Dec2022 use the anno with genes if available
+
    if [ -s $msa_anno ]; then
       cat $msa_anno
    else # placeholder comment so file has at least one line, otherwise not counted as a file by awk
@@ -45,6 +47,8 @@ function get_msa_anno {
 }
 function get_megahit_anno {
    local megahit_anno=${wdir_path}/mito_megahit.cm_anno
+   [ -s ${wdir_path}/mito_megahit.anno ] && megahit_anno=${wdir_path}/mito_megahit.anno  # 02Dec2022 use the anno with genes if available
+
    if [ -s $megahit_anno ]; then
       cat $megahit_anno
    else # placeholder comment so file has at least one line, otherwise not counted as a file by awk
@@ -166,6 +170,17 @@ function show_basic_results {
    echo -e "$cigar_cats\n"
 }
 
+function compare_annos {
+   local megahit_anno=${wdir_path}/mito_megahit.cm_anno
+   [ -s ${wdir_path}/mito_megahit.anno ] && megahit_anno=${wdir_path}/mito_megahit.anno  # 02Dec2022 use the anno with genes if available
+
+   local msa_anno=${wdir_path}/mito_msa.cm_anno
+   [ -s ${wdir_path}/mito_msa.anno ] && msa_anno=${wdir_path}/mito_msa.anno  # 02Dec2022 use the anno with genes if available
+
+   echo -e "\nComparison of the annotation files:\n"
+   compare_mito_anno.sh $megahit_anno $msa_anno
+}
+
 function create_compare_dir {
   [ ! -d $compare_dir ] && mkdir $compare_dir && msglog_module "$(basename $compare_dir) created" && return 0
   [ ! -d $compare_dir ] && msglog_module "Problem creating $compare_dir"
@@ -216,11 +231,14 @@ else
 
    show_basic_results >$overview
 
-   # 03Sep2022 reversing order to mega then msa,  since it was backwards from what prt_results expected
+   # 03Sep2022 reversing order to mega then msa, since it was backwards from what prt_results expected
    edlib_str.py $(getseq $mega_path) $(getseq $msa_path) | prt_results $show_per_line $show_all >>$overview
 
    show_all=1
    edlib_str.py $(getseq $mega_path) $(getseq $msa_path) | prt_results $show_per_line $show_all >$fullseq
+
+   # 02Dec2022 add comparison based on the anno files for megahit and msa
+   compare_annos >>$overview
 
    msglog ""
    msglog_file $overview

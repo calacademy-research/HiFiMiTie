@@ -19,9 +19,11 @@ feature_matches=blast_results/mito_feature_match_to_cand_recs.tsv
 
 MINLEN=250
 
-function create_dir {
+function create_dirs {
    [ ! -d $splitseq_dir ] && mkdir $splitseq_dir && msglog_module "created $(basename $splitseq_dir) to hold sequences for assembly by alignment"
    [ ! -d $splitseq_dir ] && msglog_module "directory $splitseq_dir could not be created" && return 5
+   [ ! -d $splitseq_feat_subdir ] && mkdir $splitseq_feat_subdir && msglog_module "  $(basename $splitseq_feat_subdir) subdir created"
+   [ ! -d $splitseq_cm_results_subdir ] && mkdir $splitseq_cm_results_subdir && msglog_module "  $(basename $splitseq_cm_results_subdir) subdir created"
    true
 }
 
@@ -45,9 +47,12 @@ function set_trnas_to_pull_from { # set the trna vars and sequence split msg var
    seq_split_msg2="Splitting sequences from sequence beginning to $end_trna_3let."
    seq_split_msg3="Splitting sequences from $end_trna_3let to $start_trna_3let to capture the Control Region and its flanks"
 
-   outfile1=${splitseq_dir}/${start_trna_3let}_to_end.fasta
-   outfile2=${splitseq_dir}/beg_to_${end_trna_3let}.fasta
-   outfile3=${splitseq_dir}/${end_trna_3let}_CR_${start_trna_3let}.fasta
+   # these will be the names of the files in the blast feature subdir (we will change dir portion for other subdir)
+   outdir=$splitseq_feat_subdir
+   outfile1=${outdir}/${start_trna_3let}_to_end.fasta
+   outfile2=${outdir}/beg_to_${end_trna_3let}.fasta
+   outfile3=${outdir}/${end_trna_3let}_CR_${start_trna_3let}.fasta
+
    outfile4=${splitseq_dir}/full_no_cr_seq.fasta
 
    true
@@ -214,6 +219,53 @@ function extract_any_full_no_nr_seqs {
    fi
 }
 
+# replace_dir moved to shared.sh
+
+# 29Nov2022 use the cm_anno results to determine how to split the sequences
+function create_cm_extract_file {
+   local file_to_create=$1
+   local type=$2
+
+   cm_file=$(replace_dir $file_to_create $splitseq_cm_results_subdir)
+   $script_dir/split_seqs_using_cm_results.sh $start_trna $end_trna $type $cm_dir >$cm_file
+}
+
+# 29Nov2022 make split files in a subdir named cm_results using cm_anno file instead of feature blasts
+function make_cm_results_extracts {
+   cm_donefile=$(replace_dir $donefile $splitseq_cm_results_subdir)
+
+   if [ ! -f $cm_donefile ]; then
+      [ -z "$start_trna" ] && set_trnas_to_pull_from
+
+      create_cm_extract_file $outfile1 $start_trna
+      create_cm_extract_file $outfile2 $end_trna
+      create_cm_extract_file $outfile3 CR
+
+      numrecs ${splitseq_cm_results_subdir}/*.fasta > $cm_donefile
+   fi
+}
+
+function make_blast_feature_extracts {
+   run_if_no_file extract_seq_after_CR  $outfile1
+   run_if_no_file extract_seq_before_CR $outfile2
+   run_if_no_file extract_CR_and_flanks $outfile3
+
+   feat_donefile=$(replace_dir $donefile $splitseq_feat_subdir)
+   numrecs ${splitseq_feat_subdir}/*.fasta > $feat_donefile
+}
+
+# softlink to either the blast features files or to the cm_results fasta depending on some criteria (currently hardwired to cm_results)
+function make_softlinks {
+   pushd $splitseq_dir >/dev/null
+   local source_dir=$(basename $splitseq_cm_results_subdir)
+
+   for fa in $source_dir/*.fasta; do
+      ln -s $fa
+   done
+
+   popd >/dev/null
+}
+
 function set_done {
    non_empty_fastas=$((head -1 ${splitseq_dir}/*.fasta | wc -l) 2>/dev/null)
    [ ! -z $non_empty_fastas ] && [ "$non_empty_fastas" -ge 1 ] && numrecs ${splitseq_dir}/*.fasta > $donefile
@@ -221,12 +273,21 @@ function set_done {
    [ -s $donefile ] && msglog_module "Split sequences created for alignment assembly and for Control Region assembly & repeat analysis"
 }
 
-function make_split_sequence_files {
-   if create_dir && set_trnas_to_pull_from; then
 
-      run_if_no_file extract_seq_after_CR  $outfile1
-      run_if_no_file extract_seq_before_CR $outfile2
-      run_if_no_file extract_CR_and_flanks $outfile3
+##########################################################################
+#                      main routine to call:                             #
+#              creates 2 sets of the split sequences in subdirs          #
+#                   softlink to one of the sets                          #
+##########################################################################
+
+function make_split_sequence_files {
+   if create_dirs && set_trnas_to_pull_from; then
+      # 29Nov2022 going to do 2 sets of splits one using the blast of the features and new one using cm_results and split_seqs_using_cm_results.sh script
+
+      make_blast_feature_extracts
+      make_cm_results_extracts
+      make_softlinks
+
       run_if_no_file extract_any_full_no_nr_seqs $outfile4
 
       set_done # set a done semaphore file when finished creating the extracts

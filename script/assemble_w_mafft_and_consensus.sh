@@ -231,6 +231,15 @@ function anno_fasta { # mitfi file and one with gh and 12S and 16S file added cr
    ${script_dir}/add_CR_to_mitfi.sh ${wdir_path}/settings.tsv - $(asmlen $fasta) > ${pfx}.cm_anno
 
    [ -s ${pfx}.cm_anno ] && msglog_module $(basename ${pfx}.cm_anno) created with rrnS, rrnL, cr and any goose hairpin added to mitfi results
+
+   if [ -s ${pfx}.cm_anno ]; then  # 01Dec2022 add genes to anno
+         if [ ! -s ${pfx}.anno ]; then
+            mito_pcg_anno.sh $fasta ${pfx}.cm_anno | add_header_to_anno > ${pfx}.anno
+            [ -s ${pfx}.anno ] && msglog_module "$(basename ${pfx}.anno ) with genes added to ${pfx}.cm_anno created for $(basename $fasta)"
+         else
+            msg $(basename ${pfx}.anno) already created
+         fi
+      fi
 }
 
 function make_no_cr_mito_fasta  {

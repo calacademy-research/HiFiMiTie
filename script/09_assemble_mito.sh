@@ -11,8 +11,10 @@ function run_assemble_w_megahit {
 function run_alignment_assembly {
    msglog ""
    msglog_module "Step 9b -- assemble using multi-sequence alignment (msa) consensus"
+
    $(get_script assemble_w_mafft_and_consensus.sh)
 }
+
 function create_msa_asm_softlink {
    local linkdir=$(basename $alignasm_dir)
 
@@ -24,7 +26,13 @@ function create_msa_asm_softlink {
    && [ -s ${alignasm_dir}/cm_mitfi/mito_msa.cm_anno ] \
    && ln -s ${linkdir}/cm_mitfi/mito_msa.cm_anno ${wdir}/mito_msa.cm_anno
 
+    # 02Dec2022 add anno with genes as well as trna and rrna
+   [  ! -s ${wdir}/mito_msa.anno  ] \
+   && [ -s ${alignasm_dir}/cm_mitfi/mito_msa.anno ] \
+   && ln -s ${linkdir}/cm_mitfi/mito_msa.anno ${wdir}/mito_msa.anno
+
 }
+
 # get the kmer based assembly -- ${megahit_dir}/megahit_best.fa
 run_if_no_file run_assemble_w_megahit ${wdir}/mito_megahit.fasta
 

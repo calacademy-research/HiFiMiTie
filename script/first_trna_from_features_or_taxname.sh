@@ -42,8 +42,8 @@ function get_first_trna_from_feat_or_taxname {
    update_setting_if_changed "top_mito_match_first_trna" "$feat_start_trna"
 
    taxname=$(get_setting "taxname")
-   if [ ! -z $taxname ]; then
-      tax_trna_start_distribution=$(mito_trna_start_dist.sh $taxname)
+   if [ ! -z "$taxname" ]; then
+      tax_trna_start_distribution=$(mito_trna_start_dist.sh $taxname | head -n 1)
       update_setting_if_changed "taxname_trna_starts" "$tax_trna_start_distribution"
       taxname_start_trna=$(echo $tax_trna_start_distribution | awk '{print $2; exit}')
       update_setting_if_changed "taxname_first_trna" "$taxname_start_trna"

@@ -113,6 +113,12 @@ function firstCharUC_resp { # return in the var $resp the first char of argument
    resp=${resp:0:1}; resp=$(echo $resp |tr '[:lower:]' '[:upper:]')
 }
 
+function replace_dir {  # 01Dec2022 added
+   local origname=$1; local newdir=$2
+
+   echo $newdir/$(basename $origname)
+}
+
 # remove all the usual ends on a fasta fastq gzipped or not file
 function set_fastx_basename {
    unset fastx_basename
@@ -204,6 +210,26 @@ function make_mito_rec_candidates_tsv { # make the combined candidate tsv from t
    [[ ! "$tsv_recs" == *"hifi_mito_matches/"* ]] && tsv_recs=${out_dir}/*.tsv
 
    sorttab -k1,1 -k12,12nr $tsv_recs | tophit | awk '$NF>9' | sorttab -k17,17nr > ${wdir}/mito_rec_candidates.tsv
+}
+
+function add_header_to_anno {  # 02Dec2022
+   anno=$1
+   awk '
+      BEGIN{FS="\t"}
+      {
+         ar[++lines] = $0
+         if (! ($1 ~ "^#")) {
+            an = an " " $7
+            an2 = an2 " " $7 $9
+         }
+      }
+      END {
+         print "#" an   # annotation synopsis with just ids
+         print "#" an2  # annotation synopsis with ids and strand
+         for(i=1; i<=lines; i++)
+            print ar[i]
+      }
+   ' $anno
 }
 
 # give duration of seconds in HMS or DHMS format
@@ -360,6 +386,8 @@ function set_dir_vars {  # eventually should set them all here, for now just som
    cr_dir=${wdir}/cr_analysis
    cm_dir=${wdir}/cm_results
    splitseq_dir=${wdir}/split_sequences
+   splitseq_feat_subdir=${splitseq_dir}/features_blast
+   splitseq_cm_results_subdir=${splitseq_dir}/cm_results
    megahit_dir=${wdir}/megahit_out
    alignasm_dir=${wdir}/msa_assembly
    msa_dir=${alignasm_dir}/msa
