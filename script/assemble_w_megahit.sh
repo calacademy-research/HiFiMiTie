@@ -143,7 +143,7 @@ function run_mitfi_on_reoriented_sequence {
 
       if [ -s $cm_anno_path ]; then  # 01Dec2022 add genes to anno
          [ -s ${mitfi}_w_gh ] && rm ${mitfi}_w_gh
-         mito_pcg_anno.sh mito_megahit.fasta $cm_anno_path | add_header_to_anno >$anno_path
+         ${script_dir}/mito_pcg_anno.sh mito_megahit.fasta $cm_anno_path | add_header_to_anno >$anno_path
          [ -s $anno_path ] && msglog_module "$(basename $anno_path) with genes added to $cm_anno created for mito_megahit.fasta"
       fi
 

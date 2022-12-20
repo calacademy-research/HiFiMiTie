@@ -77,8 +77,11 @@ function alt_get_last_trna_count {
 
 function update_last_trna {
    last_trna=$(echo $last_trna_counts | cut -c1)
-   update_setting_if_changed "last_trna" $last_trna
-   update_setting_if_changed "mito_blast_last_trna_counts" "$last_trna_counts"
+
+   if [ ! -z "$last_trna" ]; then
+      update_setting_if_changed "last_trna" $last_trna
+      update_setting_if_changed "mito_blast_last_trna_counts" "$last_trna_counts"
+   fi
 }
 
 function get_last_trna {
@@ -158,6 +161,10 @@ source ${script_dir}/first_trna_from_features_or_taxname.sh
 
 get_first_trna_setting
 get_last_trna
+
+# 14Dec2022 no longer use the alternate method here. we rely on the cm_results for the trnas, since it is more reliable
+
+exit
 
 if [ -z "$last_trna" ] || [ "$last_trna" == "$first_trna" ] || [ "$last_trna" == ":" ]; then
    msglog_module "Using alternative method to determine last_trna"

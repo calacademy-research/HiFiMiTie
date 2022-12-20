@@ -290,6 +290,9 @@ function make_split_sequence_files {
 
       run_if_no_file extract_any_full_no_nr_seqs $outfile4
 
+      # 10Dec2022 create CR flank consensus seqs and use them to pull CR from the original input recs
+      $script_dir/split_CR_recs_from_input_reads.sh
+
       set_done # set a done semaphore file when finished creating the extracts
    fi
 }

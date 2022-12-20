@@ -13,9 +13,9 @@ src_dir=$(dirname $(realpath $(which hifimitie) ) )
 shared_loaded="true"
 
 # replace these and also the lines in usage.sh when the title or version number changes
-hfmt_version=0.04
-hfmt_version_date=04-Sep-2022
-hfmt_title="HiFiMiTie version $hfmt_version -- Find & Analyze Metazoan Mitochondria from HiFi reads"
+hfmt_version=0.05
+hfmt_version_date=01-Dec-2022
+hfmt_title="HiFiMiTie version $hfmt_version -- Find & Analyze Metazoan Mitochondria from HiFi reads [$hfmt_version_date]"
 
 script_dir=${src_dir}/script
 module=$(basename $(realpath $0) .sh | sed "s/^[0-9][0-9]_//")
@@ -117,6 +117,22 @@ function replace_dir {  # 01Dec2022 added
    local origname=$1; local newdir=$2
 
    echo $newdir/$(basename $origname)
+}
+
+function replace_ext {  # 05Dec2022 added
+   local name=$1
+   local ext=$2
+   local dir=$(dirname $name)
+
+   # show the dir component if there is a slash in the input name
+   echo $name | grep "/" >/dev/null && echo -n ${dir}/
+
+   local bname=$(basename $name)
+   if echo $bname | grep "\." >/dev/null; then # there is a dot in the name defining the extension
+      echo $bname | sed -E "s/(.*)\..*/\1.${ext}/"
+   else # no extension append the new one with a dot then the ext
+      echo ${bname}.${ext}
+   fi
 }
 
 # remove all the usual ends on a fasta fastq gzipped or not file
@@ -304,7 +320,7 @@ function get_setting {
    [ -z "$key" ] && return 1
 
    file=$(settings_file)
-   [ ! -f $file ] && return
+   [ ! -s $file ] && return
 
    awk -v key="$key" 'BEGIN{FS="\t"; OFS="\t"}
         $1==key{print $2; exit}
@@ -383,16 +399,22 @@ function set_taxonomy_vars {
 
 function set_dir_vars {  # eventually should set them all here, for now just some
    blast_dir=${wdir}/blast_results
+
    cr_dir=${wdir}/cr_analysis
    cm_dir=${wdir}/cm_results
+
    splitseq_dir=${wdir}/split_sequences
    splitseq_feat_subdir=${splitseq_dir}/features_blast
    splitseq_cm_results_subdir=${splitseq_dir}/cm_results
+   splitseq_cr_search_subdir=${splitseq_dir}/cr_seqs_from_input_reads
+
    megahit_dir=${wdir}/megahit_out
+
    alignasm_dir=${wdir}/msa_assembly
    msa_dir=${alignasm_dir}/msa
    consensus_dir=${alignasm_dir}/consensus
    aligncm_dir=${alignasm_dir}/cm_mitfi
+
    final_dir=${wdir}/final_results
    compare_dir=${wdir}/compare_megahit_msa
    trf_dir=${cr_dir}/trf_output

@@ -136,15 +136,65 @@ function prt_results {
 
             to_show = min(l+show-1, len)
             if (show_all || mtch_count < length(mtch_str)) {
-               print substr(ar[1], l, show), "mito_megahit.fasta", top_line_beg"-"top_line_end top_anno_str
+               print substr(ar[1], l, show), "mito_megahit.fasta", top_line_beg "-" top_line_end top_anno_str
                print mtch_str, mtch_count " matches" addtl
-               print substr(ar[3], l, show), "mito_msa.fasta", bot_line_beg"-"bot_line_end bot_anno_str
+               print substr(ar[3], l, show), "mito_msa.fasta    ", bot_line_beg "-" bot_line_end bot_anno_str
                print ""
             }
          }
       }
    ' <(get_megahit_anno) <(get_msa_anno) -
    # reads from piped in info
+}
+
+function set_anno_vars {
+   megahit_anno=${wdir_path}/mito_megahit.cm_anno
+   [ -s ${wdir_path}/mito_megahit.anno ] && megahit_anno=${wdir_path}/mito_megahit.anno  # 02Dec2022 use the anno with genes if available
+
+   msa_anno=${wdir_path}/mito_msa.cm_anno
+   [ -s ${wdir_path}/mito_msa.anno ] && msa_anno=${wdir_path}/mito_msa.anno  # 02Dec2022 use the anno with genes if available
+}
+
+# use the anno info to tell which elements are being shown as different in the overview
+function anno_overview {
+   # megahit_mitochondrion	14067	14836	280.8	4.3e-72	complete	rrnS	12S_rRNA.cm	-
+   set_anno_vars  # set megahit_anno msa_anno
+   rm -f $elediffs  # do not want this file if no differing elments
+
+   bioawk_cas -t -v elediffs=$elediffs '
+      FILENUM < 3 && /^#/ { next }
+      FILENUM == 1 {  # megahit anno
+         mh_ele_start[$7] = $2; mh_ele_end[$7] = $3
+         long_name[$7] = $8
+      }
+      FILENUM == 2 {  # msa anno
+         msa_ele_start[$7] = $2; msa_ele_end[$7] = $3
+      }
+      FILENUM != 3 { next }
+
+      /megahit.fasta/ {  # print a line showing the element name that has differences between the 2 assemblies
+         cmnt = ""; tmplt = "%s:  mito_megahit.fasta %d-%d  mito_msa.fasta %d-%d"
+         if (split($NF, pos, "-") == 2) {  # mito_megahit.fasta 15041-15200
+            for (e in mh_ele_start) {
+               to_show = (length(e)>2) ? e : long_name[e]
+               if ( pos_in_ele(e, pos[1]) || pos_in_ele(e, pos[2]) )
+                  cmnt = " " cmnt sprintf(tmplt, to_show, mh_ele_start[e], mh_ele_end[e], msa_ele_start[e], msa_ele_end[e])
+            }
+         }
+         cmnt = substr(cmnt, 2) # skip the initial space
+         if (cmnt != "" && cmnt != lst_cmnt) {
+            print cmnt
+            print cmnt >> elediffs
+         }
+         lst_cmnt = cmnt
+      }
+
+      { print }
+
+      function pos_in_ele(ele, ofs) {
+         return ofs >= mh_ele_start[ele] && ofs <= mh_ele_end[ele]
+      }
+   ' $megahit_anno $msa_anno -
 }
 
 # how to grep the triple digit or greater equal runs the -E lets us use the + for one or more
@@ -154,13 +204,13 @@ function show_basic_results {
    local cigar_cats=$(echo $cigar | awk '{print gensub("([0-9][0-9][0-9]+=)", "\n\\1\n", "G")}' | awk '!/^$/')
    local bp_in_long_runs=$(echo -e "$cigar_cats" | awk '/^[0-9]+=$/{l+=int($1)}END{print l}')
 
-   local start_matches=$(echo $cigar | grep -E "^[0-9][0-9][0-9]+=" -o | sed "s/=//")
+   local start_matches=$(echo $cigar | grep -E "^[0-9]+=" -o | sed "s/=//")
    [ -z $start_matches ] && start_matches=0
-   local end_matches=$(echo $cigar | grep -E "[0-9][0-9][0-9]+=$" -o | sed "s/=//")
+   local end_matches=$(echo $cigar | grep -E "[0-9]+=$" -o | sed "s/=//")
    [ -z $end_matches ] && end_matches=0
    local flank_matches=$(($start_matches+$end_matches))
 
-   echo -e "Comparison between $mega ($mega_len bp) and $msa ($msa_len bp)\n"
+   echo -e "Comparison between $mega ($mega_len bp) and $msa ($msa_len bp):\n"
 
    echo edit distance $eddist
    echo $bp_in_long_runs bp in runs of matches 100 or greater
@@ -171,19 +221,64 @@ function show_basic_results {
 }
 
 function compare_annos {
-   local megahit_anno=${wdir_path}/mito_megahit.cm_anno
-   [ -s ${wdir_path}/mito_megahit.anno ] && megahit_anno=${wdir_path}/mito_megahit.anno  # 02Dec2022 use the anno with genes if available
+   set_anno_vars  # set megahit_anno msa_anno
 
-   local msa_anno=${wdir_path}/mito_msa.cm_anno
-   [ -s ${wdir_path}/mito_msa.anno ] && msa_anno=${wdir_path}/mito_msa.anno  # 02Dec2022 use the anno with genes if available
+   echo -e "Comparison of the annotation files $(basename $megahit_anno) and $(basename $msa_anno):\n"
+   ${script_dir}/compare_mito_anno.sh $megahit_anno $msa_anno
+   echo -e "\n"
 
-   echo -e "\nComparison of the annotation files:\n"
-   compare_mito_anno.sh $megahit_anno $msa_anno
+   # get the first line from the compare script and store info in settings.sh for the Complete analysis to use
+   local result=$(${script_dir}/compare_mito_anno.sh $megahit_anno $msa_anno | head -n 1)
+   local anno_chosen=$(echo $result | awk '{print $NF; exit}')
+   local assembly_chosen=$(replace_ext $anno_chosen fasta)
+
+   update_setting "chosen_anno" "$anno_chosen"
+   update_setting "chosen_assembly" "$assembly_chosen"
+   update_setting "anno_compare_info" "$result"
+}
+
+function update_elediff_setting {
+   diffval=$(awk 'BEGIN{FS=":"}NR>1{printf("\t")}{printf("%s", $1)}' $elediffs)
+   update_setting "asm_differing_elements" "$diffval"
 }
 
 function create_compare_dir {
   [ ! -d $compare_dir ] && mkdir $compare_dir && msglog_module "$(basename $compare_dir) created" && return 0
   [ ! -d $compare_dir ] && msglog_module "Problem creating $compare_dir"
+}
+
+#############################################
+#      main function for comparison         #
+#############################################
+
+function compare_mega_msa_assemblies {
+   # ready to start comparison mark it in log
+   msglog_module "Comparing $mega ($mega_len bp) and $msa ($msa_len bp)"
+
+   # 02Dec2022 add comparison based on the anno files for megahit and msa
+   compare_annos >$overview
+
+   # result has spaces so make sure to quote
+   rslt="$(get_editdist_result)"
+
+   # used in show_basic_results and stored in settings
+   eddist=$(getfld "$rslt" 1)
+   cigar=$(getfld "$rslt" 2)
+
+   show_basic_results >>$overview
+
+   # 03Sep2022 reversing order to mega then msa, since it was backwards from what prt_results expected
+   edlib_str.py $(getseq $mega_path) $(getseq $msa_path) | prt_results $show_per_line $show_all | anno_overview >>$overview
+
+   show_all=1
+   edlib_str.py $(getseq $mega_path) $(getseq $msa_path) | prt_results $show_per_line $show_all >$fullseq
+
+   msglog ""
+   msglog_file $overview
+
+   update_elediff_setting  # 05Dec2022
+   update_setting "msa_megahit_edit_dist" $eddist
+   update_setting "msa_megahit_edit_cigar" "$cigar"
 }
 
 ###################################################################################################
@@ -209,41 +304,9 @@ show_per_line=160
 #files to hold comparison info
 overview=$compare_dir/comparison_overview.txt
 fullseq=$compare_dir/fullsequence_comparison.txt
+elediffs=$compare_dir/differing_elements.txt
 
 # create a directory to hold the comparison files
 create_compare_dir
 
-if [ -s $overview ]; then
-
-   msg $(basename $overview) already created
-
-else
-
-   # ready to start comparison mark it in log
-   msglog_module "Comparing $mega ($mega_len bp) and $msa ($msa_len bp)"
-
-   # result has spaces so make sure to quote
-   rslt="$(get_editdist_result)"
-
-   # used in show_basic_results and stored in settings
-   eddist=$(getfld "$rslt" 1)
-   cigar=$(getfld "$rslt" 2)
-
-   show_basic_results >$overview
-
-   # 03Sep2022 reversing order to mega then msa, since it was backwards from what prt_results expected
-   edlib_str.py $(getseq $mega_path) $(getseq $msa_path) | prt_results $show_per_line $show_all >>$overview
-
-   show_all=1
-   edlib_str.py $(getseq $mega_path) $(getseq $msa_path) | prt_results $show_per_line $show_all >$fullseq
-
-   # 02Dec2022 add comparison based on the anno files for megahit and msa
-   compare_annos >>$overview
-
-   msglog ""
-   msglog_file $overview
-
-   update_setting "msa_megahit_edit_dist" $eddist
-   update_setting "msa_megahit_edit_cigar" "$cigar"
-
-fi
+run_if_no_file compare_mega_msa_assemblies $overview

@@ -234,7 +234,7 @@ function anno_fasta { # mitfi file and one with gh and 12S and 16S file added cr
 
    if [ -s ${pfx}.cm_anno ]; then  # 01Dec2022 add genes to anno
          if [ ! -s ${pfx}.anno ]; then
-            mito_pcg_anno.sh $fasta ${pfx}.cm_anno | add_header_to_anno > ${pfx}.anno
+            ${script_dir}/mito_pcg_anno.sh $fasta ${pfx}.cm_anno | add_header_to_anno > ${pfx}.anno
             [ -s ${pfx}.anno ] && msglog_module "$(basename ${pfx}.anno ) with genes added to ${pfx}.cm_anno created for $(basename $fasta)"
          else
             msg $(basename ${pfx}.anno) already created
