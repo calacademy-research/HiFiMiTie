@@ -71,7 +71,7 @@ So the first pass of blasting to the mitodb is going to be supplemented with an 
 if less than 500 reads are found in the blast output of the mito db.
 The reads matched are used for a bootstrap version of the mitochondrion from megahit. This record is blasted against mito db and revcomped appropriately.
 Then the single bootstrap mitochondrion record is made into a blast db and the input reads are blasted against it. The records found here are added to those found in 
-the first pass -- though in all likelihood they are a sueprset of those.
+the first pass -- though in all likelihood they are a superset of those.
 
 Also, we found that high Control Region heteroplasmy could cause records to be missed in that first pass too. The bootstrap second pass will likely find more and perhaps all.
 However, we are still doing yet another pass through the input reads. This time in the split records step where we search the CR flanks in the input reads and
