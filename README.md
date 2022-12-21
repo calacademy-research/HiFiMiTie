@@ -76,4 +76,4 @@ the first pass -- though in all likelihood they are a superset of those.
 Also, we found that high Control Region heteroplasmy could cause records to be missed in that first pass too. The bootstrap second pass will likely find more and perhaps all.
 However, we are still doing yet another pass through the input reads. This time in the split records step where we search the CR flanks in the input reads and
 where the begin flank is followed by the end flank in the read we extract those and the putative CR sequence in between. In our fish genome with high CR heteroplasmy
-the first pass got only 22 CR sequences but this second pass using the flanks of those 22 yielded 133 sequences.
+the first pass got only 22 CR sequences but this second pass using the flanks of those 22 yielded 133 sequences, 111 additional sequences.
