@@ -63,3 +63,17 @@ Example forthcoming.
 ### Installation
 
 Not now, but eventually this should require cloning this repo to say ~/bin/HiFiMiTie then creating a softlink `ln -s ~/bin/HiFiMiTie/hifimitie.sh ~/bin/hifimitie` and another one `ln -s ~/bin/hifimitie ~/bin/hfmt` and downloading the dependencies. The command ``hifimitie check`` checks for the existence of the major dependencies.
+
+### Notes
+
+First versions relied upon close mitochondrial references from other taxa. Though this is often the case it is not always a good idea to rely solely upon this.
+So the first pass of blasting to the mitodb is going to be supplemented with an additional pass using these matched reads
+if less than 500 reads are found in the blast output of the mito db.
+The reads matched are used for a bootstrap version of the mitochondrion from megahit. This record is blasted against mito db and revcomped appropriately.
+Then the single bootstrap mitochondrion record is made into a blast db and the input reads are blasted against it. The records found here are added to those found in 
+the first pass -- though in all likelihood they are a superset of those.
+
+Also, we found that high Control Region heteroplasmy could cause records to be missed in that first pass too. The bootstrap second pass will likely find more and perhaps all.
+However, we are still doing yet another pass through the input reads. This time in the split records step where we search the CR flanks in the input reads and
+where the begin flank is followed by the end flank in the read we extract those and the putative CR sequence in between. In our fish genome with high CR heteroplasmy
+the first pass got only 22 CR sequences but this second pass using the flanks of those 22 yielded 133 sequences, 111 additional sequences.
