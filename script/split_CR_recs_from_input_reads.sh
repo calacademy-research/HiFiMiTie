@@ -1,6 +1,6 @@
 #!/bin/bash
 
-this_dir=$(dirname $(realpath $0)) && source ${this_dir}/shared.sh && this=$(basename $0) # sets msg, is_number functions and usage among other things
+source $(dirname $(realpath $0))/shared.sh  # sets msg, script_dir is_number functions and usage among other things
 [ -z $wdir ] && msglog_module "The hfmt_<num> working directory not found" && exit 2
 
 maxeditdist=4

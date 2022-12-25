@@ -1,15 +1,16 @@
 #!/bin/bash
 
-src_dir=$(dirname $(realpath $0)) && source ${src_dir}/shared.sh # sets msg, is_number functions and usage among other things
-
+source $(dirname $(realpath $0))/shared.sh  # sets msg, script_dir is_number functions and usage among other thing
 [ -z $wdir ] && msg "The hfmt_<num> working directory not found" && exit 2
 
 # pull the records named in the file mito_rec_candidates.tsv from the fasta or fastq files list in files_to_search.fofn
 # blast_to_mito.sh should have been called first so that mito_rec_candidates.tsv has been created
 
-out_fasta=${wdir}/mito_hifi_recs.fasta
-candidate_fasta=${wdir}/mito_hifi_candidates.fasta
-cand_trf_dir=trf_cand_check
+# 24Dec2022 bootstrap_recs: make an additional pass through the input reads using a prelim mito rec built from the candidate reads
+
+################################################################################
+#                                main functions                                #
+################################################################################
 
 function check_input_files {
    tsv_recs=${wdir}/mito_rec_candidates.tsv
@@ -116,7 +117,6 @@ function pull_from_file {  # this one throws away too many candidate by using on
 function fofn_pull_recs
 {
    [ -f $candidate_fasta ] && printf "" >$candidate_fasta  # new way candidates here filter to new set later
-#   [ -f $out_fasta ] && printf "" >$out_fasta
    pfc_file=$wdir/pfc_msg; rm -f $pfc_file
 
    # pull records from each file listed
@@ -130,9 +130,6 @@ function fofn_pull_recs
 
       pull_candidates_from_file $fname >>$candidate_fasta
       [ -f $pfc_file ] && msglog_module "$(head -1 $pfc_file)" && rm -f $pfc_file
-
-#      pull_from_file $fname >>$out_fasta
-#      [ -f $pfc_file ] && msglog_module "$(head -1 $pfc_file)" && rm -f $pfc_file
 
    done < $fofn
 }
@@ -244,7 +241,7 @@ function set_candidate_filter_stat_vars {
 
    fasta_for_stats=$out_fasta
 
-   local rslts=$(awk -v qcov_min=$qcov_min '
+   local rslts=$(awk -v qcov_min=$qcov_at_least '
       $1 >= qcov_min { QPct++; next }
       /gh:/ && /trf/ { gh_trf++; next }
       /gh:/ { gh++; next }
@@ -294,20 +291,32 @@ function selections_from_candidates {
       msg "$(basename $candidate_fasta) already created with $(numrecs $candidate_fasta) records"
    fi
 
-   run_trf_on_candidates  # will use this output to possibly include more of the candidate records in the chosen set
+   # 24Dec2022 comment out trf run here since we now do bootstrap and separate scan for the control screen
+   #run_trf_on_candidates  # will use this output to possibly include more of the candidate records in the chosen set
+
    filter_recs_from_candidates  # this will make the mito_hifi_recs.fasta file for downstream use
 }
 
+################################################################################
+#                                 starts here                                  #
+################################################################################
+
+out_fasta=${wdir}/mito_hifi_recs.fasta
+candidate_fasta=${wdir}/mito_hifi_candidates.fasta
+cand_trf_dir=trf_cand_check
+
 # job of these is to create the ${wdir}/mito_hifi_recs.fasta file
 if [ ! -s $out_fasta ]; then
-
    check_input_files  # make sure we have input necessary
    selections_from_candidates  # this will pull all the candidates recs and from it make the mito_hifi_recs.fasta file for downstream use, aka $out_fasta
-
 else
    msg "$(basename $out_fasta) already created with $(numrecs $out_fasta) records"
 fi
 
+# 24Dec2022 bootstrap_recs: make an additional pass through the input reads using a prelim mito rec built from the candidate reads
+run_if_no_file $script_dir/bootstrap_recs.sh $bootstrap_dir/bootstrap.done
+
+# make a file mito_hifi_recs.seqinf with some stats
 basic_rec_stats
 
 # make a blast database from those records in a subdir named mito_hifi_rec_db

@@ -398,6 +398,7 @@ function set_taxonomy_vars {
 }
 
 function set_dir_vars {  # eventually should set them all here, for now just some
+   bootstrap_dir=$wdir/bootstrap_recs
    blast_dir=${wdir}/blast_results
 
    cr_dir=${wdir}/cr_analysis
