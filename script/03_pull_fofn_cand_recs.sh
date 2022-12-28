@@ -177,6 +177,8 @@ function filter_recs_from_candidates {
 function get_trf_recs {
    echo "# at least one line must be output for awk to see this as a file"
 
+   return # 28Dec2022 no longer using trf here since we are doing the bootstrap step now
+
    unset errmsg
    local trf_path=${wdir}/$cand_trf_dir
    local rpt_file=${trf_path}/trf_stats_report.tsv
@@ -258,7 +260,8 @@ function set_candidate_filter_stat_vars {
 
 function get_candidate_filter_stats {
    set_candidate_filter_stat_vars
-   echo "QPct $QPct, gh and trf $gh_trf, gh $gh, trf $trf"
+   # echo "QPct $QPct, gh and trf $gh_trf, gh $gh, trf $trf"
+   echo "QPct $QPct, gh $gh"
 }
 
 function rec_db_exists {

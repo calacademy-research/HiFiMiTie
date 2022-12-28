@@ -80,7 +80,9 @@ function cat_input_files {
    done < $fofn
 }
 
-function make_CR_softlink {  # make a softlink for hte gneric name ofthe CR seq file
+# make a softlink for the generic name of the CR seq file and if it is better than split seq version
+# rename split_seq version with first_cut_ prefix and softlink to the XR seq file in the subdir
+function make_CR_softlink {  # make a softlink for the generic name of the CR seq file
    [ -z "$CR_seqs" ] && get_file_for_CR_flanks
    [ -z "$CR_seqs" ] && return 1; [ ! -s $CR_seqs ] && return 1
    [ -z "$new_cr_seq_file" ] && return 2; [ ! -s $new_cr_seq_file ] && return 2
@@ -92,6 +94,11 @@ function make_CR_softlink {  # make a softlink for hte gneric name ofthe CR seq 
       nrecs=$recs_new_search
       orecs=$recs_first
       link_to=$rel_path_new_cr_seq_file
+
+      # add prefix to $CR_seqs
+      CR_seqs_base=$(basename $CR_seqs)
+      mv $CR_seqs $(dirname $CR_seqs)/first_cut_$CR_seqs_base
+      ln -s $link_to $CR_seqs
    else
       nrecs=$recs_first
       orecs=$recs_new_search

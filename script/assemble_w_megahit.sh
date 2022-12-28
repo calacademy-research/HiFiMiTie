@@ -16,20 +16,21 @@ function run_megahit {
     msglog_module "cd megahit_out"
     cd megahit_out
 
-    # this should be name of best matching contig in the megahit.out directory
-    ctg=$(grep "^>" final.contigs.fa | sed "s/multi=//" | sort -k3,3Vr | awk '{print substr($1,2);exit}')
-
-    # we will not fold it since we are going to need to reorient it to start with first_trna (usually F, ie Phe)
-    awk -v ctg="${ctg}" '
-       $1 == ">"ctg {
-          print $0
-          prt=1
-          next
-       }
-       prt && /^>/ {exit}
-       prt { print }
-    ' final.contigs.fa >megahit_best.fa
+    write_megahit_best
     msglog_module "megahit_best.fa mito file created"
+}
+
+# usually the sequence with the highest coverage is the full mito sequence.
+# however when there are a lot of duplicated subsequences such as in CR tandem repeats
+# this might not be the case. So look for hight coverage and seq length >10,000 bases
+# write out the non-mito (ie <10000bp) high coverage sequences into megahit_hicov.fa
+# and write the mito seq into megahit_best.fa
+function write_megahit_best {
+   rm -f megahit_best.fa megahit_hicov.fa
+   cawk 'BEGIN{mbest = "megahit_best.fa"; mhicov = "megahit_hicov.fa"; mitomin = 10000}
+      length($2) < mitomin { printf(">%s %s\n%s", $1, fldcat(4,NF), $2) >>mhicov; next }
+      { printf(">%s %s\n%s", $1, fldcat(4,NF), $2) >mbest ; exit }
+   ' <( bawk '{print}' final.contigs.fa | sort -k4,4Vr)
 }
 
 function remove_low_evalues {
