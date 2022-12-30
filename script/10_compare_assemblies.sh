@@ -159,7 +159,7 @@ function set_anno_vars {
 function anno_overview {
    # megahit_mitochondrion	14067	14836	280.8	4.3e-72	complete	rrnS	12S_rRNA.cm	-
    set_anno_vars  # set megahit_anno msa_anno
-   rm -f $elediffs  # do not want this file if no differing elments
+   rm -f $elediffs  # do not want this file if no differing elements
 
    bioawk_cas -t -v elediffs=$elediffs '
       FILENUM < 3 && /^#/ { next }
@@ -239,6 +239,10 @@ function compare_annos {
 
 function update_elediff_setting {
    diffval=$(awk 'BEGIN{FS=":"}NR>1{printf("\t")}{printf("%s", $1)}' $elediffs)
+   if [ -z "$diffval" ]; then  # 29Dec2022 if empty then either elediff is None or the CR are different
+      diffval="CR"
+      (( mega_len == msa_len )) && diffval="None"
+   fi
    update_setting "asm_differing_elements" "$diffval"
 }
 
@@ -301,7 +305,7 @@ msa_len=$(mitolen $msa_path)
 show_all=0
 show_per_line=160
 
-#files to hold comparison info
+# files to hold comparison info
 overview=$compare_dir/comparison_overview.txt
 fullseq=$compare_dir/fullsequence_comparison.txt
 elediffs=$compare_dir/differing_elements.txt

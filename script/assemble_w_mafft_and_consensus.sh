@@ -1,6 +1,6 @@
 #!/bin/bash
 
-this_dir=$(dirname $(realpath $0)) && source ${this_dir}/shared.sh && this=$(basename $0) # sets msg, is_number functions and usage among other things
+source $(dirname $(realpath $0))/shared.sh  # sets src_dir, wdir, wdir_path, script_dir, msglog, msglog_module, is_number functions and usage among other things
 [ -z $wdir ] && msglog_module "The hfmt_<num> working directory not found" && exit 2
 
 function run_mafft_and_consensus {
@@ -83,7 +83,7 @@ function set_seq_filenames {
    # get the 3 sequence file paths
    fasta_trna_to_end=$(ls $splitseq_dir/*_end.fasta)
    fasta_beg_to_trna=$(ls $splitseq_dir/beg_*.fasta)
-   fasta_CR_btw_trnas=$(ls $splitseq_dir/*_CR_*.fasta)
+   fasta_CR_btw_trnas=$(ls $splitseq_dir/[A-Z]*_CR_*.fasta)
 
    if [ -z "$fasta_trna_to_end" ] || [ -z "$fasta_beg_to_trna" ] || [ -z "$fasta_CR_btw_trnas" ]; then
       false
@@ -339,10 +339,52 @@ function check_for_tandem_repeats {
    [ ! -d $trf_dir ] && mkdir $trf_dir; local retcode=$?
    [ ! -d $trf_dir ] && msglog_module "Problem creating $trf_dir [$retcode]" && return $retcode
 
-   pushd $trf_dir
+   pushd $trf_dir >/dev/null
    run_trf.sh $fa_file
-   echo "" ## trf needsd final newline
-   popd
+   echo "" ## trf needs final newline
+   popd >/dev/null
+
+   add_repeats_to_anno
+}
+function get_formatted_trf_line {  # depends on trf_stats being set and a file. check before calling
+   head -n 1 $trf_stats |
+   awk  'BEGIN{OFS="\t"}
+      {sub("--","\t",$3)
+      printf("%s\t%s\t%s\t.\t.\trepeat\tRepeat Region\t+\t%s copies %s bp consensus: %s\n", $1, $3, $7, $9,$13,$NF)}
+   '
+}
+function add_repeats_to_anno {
+   anno=$aligncm_dir/mito_msa.anno
+   trf_stats=$msa_trf_dir/trf_stats_report.tsv
+
+   trf_anno=${anno}_w_trf
+
+   [ ! -s $anno ] && return 3; [ ! -s $trf_stats ] && return 4
+
+   if [ ! -z "$(get_formatted_trf_line)" ]; then
+      cawk -t '
+         FILENUM==1 && FNR==1{trf_start = $2; trf_end = $3; trf_line = $0}
+
+         FILENUM==2 && /^#/ {print; next}
+         FILENUM==2 {
+            if ($2 > trf_start && ! trf_prtd) {
+               print trf_line
+               trf_prtd = 1
+            }
+            print
+         }
+         END { if (! trf_prtd) print trf_line }
+      ' <(get_formatted_trf_line) $anno > $trf_anno
+
+      anno_size=$(stat -c %s $anno)
+      trf_anno_size=$(stat -c %s $trf_anno)
+      if (( trf_anno_size > anno_size )); then
+         mv $trf_anno $anno
+         msglog_module "tandem repeat info added to mito_msa.anno"
+      else
+         rm $trf_anno
+      fi
+   fi
 }
 
 # 11Aug2022 this currently uses gh_succ_trna and gh_prev_trna when if missing defaults as F P
@@ -354,7 +396,7 @@ function clean_up_cr_settings {
    gh_prev=$(get_setting gh_prev_trna)
 
    [ -z $gh_succ ] && update_setting gh_succ_trna $(get_setting_or_default first_trna F)
-   [ -z $gh_prev ] && update_setting gh_prev_trna $(get_setting_or_default last_trna E)
+   [ -z $gh_prev ] && update_setting gh_prev_trna $(get_setting_or_default last_trna P)
 }
 
 ###############################################################################

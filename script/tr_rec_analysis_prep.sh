@@ -119,7 +119,8 @@ function make_copynum_rec_subsets {
    add_info_files_to_copynum_dirs
 
    # create the rec fasta file for each copynum category
-   for d in tr_copynum_crs/*_copy_tr; do
+   #for d in tr_copynum_crs/*_copy_tr; do
+   for d in $(ls -dv tr_copynum_crs/*_copy_tr); do  # sort in numeric order 29Dec2022
       info=${d}/cr_recs.info
       recs=${d}/cr_recs.fa
       prefix=$d

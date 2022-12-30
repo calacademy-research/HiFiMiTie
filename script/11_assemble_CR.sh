@@ -50,7 +50,7 @@ function handle_settings {
 }
 
 function make_softlinks {  # make soft link to CR sequences if not already there -- eg split_sequences/Thr_CR_Pro.fasta
-   CR_fasta_file=$(ls ../split_sequences/*_CR_*.fasta | head -1)
+   CR_fasta_file=$(ls ../split_sequences/???_CR_???.fasta | head -1)
    CR_fasta_name=$(basename $CR_fasta_file)
    generic_name=CR_recs_w_flanks.fasta
 
