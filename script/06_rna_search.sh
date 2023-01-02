@@ -283,7 +283,7 @@ run_if_no_file tRNA_searches ${cmdir_path}/mito_hifi_recs.mitfi
 
 if [ -s ${cmdir_path}/mito_hifi_recs.mitfi ]; then
    create_matrix_and_anno_files
-   count_and_record_gh_recs
+   run_if_no_file count_and_record_gh_recs ${cmdir_path}/mito_hifi_seq_names_w_gh.txt
 else
    msglog_module "error: ${cmdir_path}/mito_hifi_recs.mitfi was not found"
 fi

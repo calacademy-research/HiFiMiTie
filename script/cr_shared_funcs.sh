@@ -10,9 +10,26 @@
 # example output in the dist file
 # Thr_NC_007975	1639385/ccs_RC	91.429	70	4	2	1	70	4176	4243	Pro_NC_007975	1639385/ccs_RC	100.000	69	0	0	1	69	5674	5742	dist: 1500 trnas: 139 CR: 1361
 
+dist_file_type="cm"  # 02Jan2023 use cm anno file to get CR lengths
+
 ####### functions ######################################################
 
 function create_dist_file { # called with the 2 trnas that will flank the control region
+   if [ $dist_file_type != "blast" ]; then
+      cm_anno_ver_of_create_dist_file $@
+   else
+      blast_ver_of_create_dist_file $@
+   fi
+}
+
+function cm_anno_ver_of_create_dist_file  { # called with the 2 trnas that will flank the control region
+   set_cr_filenames $1 $2 # sets fiveprime_flank threeprime_flank and dist_file vars
+   CR_info_from_cm_anno $@ > $dist_file
+
+   [ -s $dist_file ] && msglog_module $(basename $dist_file) created
+}
+
+function blast_ver_of_create_dist_file { # called with the 2 trnas that will flank the control region
    set_cr_filenames $1 $2 # sets fiveprime_flank threeprime_flank and dist_file vars
 
    pos_tsv=${blast_dir}/mito_feature_match_to_cand_recs.tsv
@@ -60,18 +77,26 @@ function get_stat_file_value {
    ' $stat_file
 }
 
+function dist_lines_for_stats {
+   if [ $dist_file_type != "blast" ]; then
+      cat $dist_file
+   else
+      trna1_trna2_recs $trna1 $trna2
+   fi
+}
+
 function get_stats_from_dist_file {
    trna1=$1; trna2=$2
 
-   recs=$(awk '{sum+=$NF; recs++}END{mean=sum/recs; print recs}' <(trna1_trna2_recs $trna1 $trna2))
-   mean=$(awk '{sum+=$NF; recs++}END{mean=sum/recs; print mean}' <(trna1_trna2_recs $trna1 $trna2))
-   stddev=$(awk -v mean=$mean 'function abs(a){return (a<0)? -a : a}{diffs+=abs($NF-mean); recs++}END{stddev=diffs/recs; print stddev}' <(trna1_trna2_recs $trna1 $trna2))
+   recs=$(awk '{sum+=$NF; recs++}END{mean=sum/recs; print recs}' <(dist_lines_for_stats) )
+   mean=$(awk '{sum+=$NF; recs++}END{mean=sum/recs; print mean}' <(dist_lines_for_stats) )
+   stddev=$(awk -v mean=$mean 'function abs(a){return (a<0)? -a : a}{diffs+=abs($NF-mean); recs++}END{stddev=diffs/recs; print stddev}' <(dist_lines_for_stats) )
 
    mean=$(printf "%.0f\n" $mean) # round to nearest integer
    stddev=$(printf "%.0f\n" $stddev) # round to nearest integer
    [ $stddev = 0 ] && stddev=1
 
-   awk '{print $NF}' <(trna1_trna2_recs $trna1 $trna2) |sort |uniq -c | sort -k1,1nr -k2,2n \
+   awk '{print $NF}' <(dist_lines_for_stats) |sort |uniq -c | sort -k1,1nr -k2,2n \
     | awk -v mean=$mean -v stddev=$stddev '
       BEGIN{print "    Num CR_len"; minlen = 1000000; mean=int(mean); stddev=int(stddev); sd_min=mean-stddev; sd_max=mean+stddev}
 
@@ -150,4 +175,41 @@ function set_cr_filenames {  # can call with two args for trna or use the first_
    dist_file=${cr_dir}/trn${fiveprime_flank}_trn${threeprime_flank}_distances.tsv
    stat_file=${cr_dir}/ControlRegion_btw_trn${fiveprime_flank}_trn${threeprime_flank}_length.stats
 }
+
+# 02Jan2023 use the cm anno file to get CR length instead of the blast results from a close mito taxon
+: '
+m64044_201205_132125/53936795/ccs       3321    3390    60.69   1.878E-11       UGG     P       Metazoa_P.cm    -       0
+m64044_201205_132125/53936795/ccs       7222    7237    .       .       CCCCCCCTACCCCCCC        gh      goose_hairpin   +       3832
+m64044_201205_132125/53936795/ccs       7576    7644    59.59   6.31E-12        GAA     F       Metazoa_F.cm    +       339
+'
+
+# this reports seq name, CR beg, CR end, CR length from the mito_hifi_recs.cm_anno file
+function CR_info_from_cm_anno {
+   local annoFile=$cm_dir/mito_hifi_recs.cm_anno
+   local start_flank=$1; local end_flank=$2
+
+   unset err
+   [ -z $start_flank ] && err="start flank"; [ -z $end_flank ] && err="end flank"
+   [ ! -z $err ] && msglog_module "$err not specified for CR_dist_from_cm_anno" && return 1
+
+   awk -v start_flank=$start_flank -v end_flank=$end_flank '
+      BEGIN{FS="\t"; OFS="\t"}
+      $1 in seen{ next }
+      $7 == start_flank{ start_flank_endpos[$1] = $3 }
+      $7 == end_flank && $1 in start_flank_endpos {  # only acknowledge end_flank if start flank already seen
+         end_flank_begpos[$1] = $2
+         CR_start = start_flank_endpos[$1] + 1
+         CR_end = end_flank_begpos[$1] - 1
+         CR_len = CR_end - CR_start + 1
+         print $1, CR_start, CR_end, CR_len
+         delete start_flank_endpos[$1]; seen[$1]++
+      }
+   ' $annoFile
+}
+
+# this pulls the CR length field from the info and sorts and counts these lengths
+function CR_dist_from_cm_anno {
+   CR_info_from_cm_anno $@ | awk '{print $NF}' | sort -n | uniq -c
+}
+
 ####### end defs #######################################################

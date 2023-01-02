@@ -8,6 +8,7 @@ Chr1_mm	cmsearch	gene	3172239	3172348	.	+	.	ID=gene-Gm26206;Dbxref=GeneID:115487
 msa_consensus_mitochondrion     14870   16299   .       .       .       cr      Control Region  +       1430    1
 msa_consensus_mitochondrion     14926   14940   .       .       CCCCCCCTCCCCCCC gh      goose_hairpin   +       15      56
 msa_consensus_mitochondrion     16974   17151   .       .       .       cr      Control Region  +       178     1
+msa_consensus_mitochondrion	16981	18376	3489	.	.	repeat	Repeat Region	+	34.0 copies 60 bp consensus: CCCCCCGTTCGGGCTTTGCTTAAGTCCATGCTAATATATTTCCTTTTTTTTTCGTCCGCA
 
 # gff conversion
 msa_consensus_mitochondrion	mitfi	tRNA	1	68	1.935E-12	+	.	symbol=F;anticodon=GAA;model=Metazoa_F.cm;distance_from_last=1
@@ -73,6 +74,12 @@ awk '
    model ~ "OH.cm" {  # OH
       id = sprintf("symbol=%s;type=%s;model=%s;distance_from_last=%d", $7, $6, model, dist_from_last)
       print name, "blastn", "rep_origin", start, end, score, strand, phase, id
+      next
+   }
+   model ~ "Repeat Region" {  # tandem repeat region
+      split($NF, rptinf, " ")
+      id = sprintf("symbol=repeat;type=Repeat Region;consensus=%s;bp=%d;copies=%s", rptinf[6], rptinf[3], rptinf[1])
+      print name, "trf", "repeat_region", start, end, score, strand, phase, id
       next
    }
    {  # should be a gene

@@ -22,7 +22,7 @@ oneliner=${dir}/one_line_per_rec.cm_anno.srt
 cm_anno=${dir}/mito_hifi_recs.cm_anno
 recs=${dir}/../mito_hifi_recs.fasta
 
-MINLEN=250
+MINLEN=150
 
 # this lets first_ele and last_ele be either 1 let or 3 let AA syms
 function assign_ele_vars {
