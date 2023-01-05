@@ -36,7 +36,8 @@ awk -v min_score_for_OH=$min_score_for_OH '
    { recid = $1 }  # could be "#" but that is OK
 
    recid != lst_recid && lst_recid in OH_line && OH_startpos[lst_recid] > 0 { #  it is at end of the sequence
-      print OH_line[lst_recid]
+      if ($7 != "OH")  # do not add it a second time if earlier runs have already added it here
+         print OH_line[lst_recid]
       OH_startpos[lst_recid] = 0  # mark it so we do not print again (tho unnecessary here, still mark it)
    }
 

@@ -271,6 +271,38 @@ function count_and_record_gh_recs {
    fi
 }
 
+# 03Jan2023
+##########################################################################
+# these group of functions are the start of allowing the 12S rrna to be  #
+# recognized as the beginning flank of the CR, as seen eg in arthropods  #
+##########################################################################
+
+# these use first line of a matrix file to get either the first or last valid rna in the header list
+function get_first_rna {
+   get_rna $1 first
+}
+function get_last_rna {
+   get_rna $1
+}
+function get_rna {  # call without second arg to get last rna, otherwise will get the first rna from the matrix file header line
+   local matrix_file=$1; local want_first=$2
+
+   AAsyms.sh $(head -n 1 $matrix_file) |
+   awk -v want_first=$want_first '
+      match($0, "Unk") { next }
+      { rna = $1 }
+      want_first { exit }
+      END{print rna}
+   '
+}
+function set_rna_vars { # set the trna nd the rna vars, often the same though 12S can be the last_rna for some species
+   update_setting_if_changed "first_trna" $(get_first_rna $cmdir_path/trna_right_neighbor.matrix)
+   update_setting_if_changed "last_trna"  $(get_last_rna $cmdir_path/trna_right_neighbor.matrix)
+
+   update_setting_if_changed "first_rna" $(get_first_rna $cmdir_path/cm_anno_right_neighbor.matrix)
+   update_setting_if_changed "last_rna"  $(get_last_rna $cmdir_path/cm_anno_right_neighbor.matrix)
+}
+
 ##########################################################################
 #                                                                        #
 #   call the functions if the files they create are not in $cmdir_path   #
@@ -283,6 +315,7 @@ run_if_no_file tRNA_searches ${cmdir_path}/mito_hifi_recs.mitfi
 
 if [ -s ${cmdir_path}/mito_hifi_recs.mitfi ]; then
    create_matrix_and_anno_files
+   set_rna_vars
    run_if_no_file count_and_record_gh_recs ${cmdir_path}/mito_hifi_seq_names_w_gh.txt
 else
    msglog_module "error: ${cmdir_path}/mito_hifi_recs.mitfi was not found"

@@ -89,6 +89,7 @@ function add_to_mitfi {
 
          FNR==NR {
             ar_strts[ ++pcgs ] = $2
+            ar_id[ pcgs ] = $7
             ar_row[ pcgs ] = $0
             next
          }
@@ -97,11 +98,13 @@ function add_to_mitfi {
          /^#/ { print; next }
 
          $2 > strt {
-            for (; $2 > strt && pcg_ix <= pcgs; next_pcg() )
+            for (; $2 > strt && pcg_ix <= pcgs; next_pcg() ) {
+               if (ar_id[pcg_ix]=="OH" && lst_mitfi == "OH") continue  # do not print OH again f inserted by earlier operation
                print ar_row[ pcg_ix ]
+            }
          }
 
-         { print } # always print a line from the mitfi file
+         { print; lst_mitfi = $7 } # always print a line from the mitfi file
 
          END {
             for (; pcg_ix <= pcgs; next_pcg() )

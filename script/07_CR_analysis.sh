@@ -50,12 +50,12 @@ function log_stat_file {
 }
 
 function create_wrap_around_cr_dist_file {
-   create_dist_file $last_trna $first_trna
+   create_dist_file $last_rna $first_rna
 }
 
-function get_wrap_around_cr_stats {
-   get_stats_from_dist_file $last_trna $first_trna
-   update_CR_settings $last_trna $first_trna
+function get_wrap_around_cr_stats {  # 03Jan2023 change from trna to rna to accomodate 12S CR flank
+   get_stats_from_dist_file $last_rna $first_rna
+   update_CR_settings $last_rna $first_rna
 
    log_stat_file
 }
@@ -63,6 +63,10 @@ function get_wrap_around_cr_stats {
 function set_trna_vars {
    first_trna=$(get_setting_or_default "first_trna" "F")
    last_trna=$(get_setting_or_default "last_trna" "P")
+
+   # working toward allowing 12S as last_trna
+   first_rna=$(get_setting_or_default "first_trna" $first_trna)
+   last_rna=$(get_setting_or_default "last_trna" $last_trna)
 
    gh_prev_trna=$(get_setting_or_default "gh_prev_trna" $last_trna)
    gh_succ_trna=$(get_setting_or_default "gh_succ_trna" $first_trna)
@@ -103,9 +107,9 @@ declare -i largest_mean=0
 
 # this uses the first trna in the feature list of the best match (usually F but can be others; eg in Arthropoda Lepidoptera is M)
 get_first_trna_setting
-set_trna_vars
+set_trna_vars  # 03Jan2023 also set first_rna and last_rna
 
-set_cr_filenames $last_trna $first_trna
+set_cr_filenames $last_rna $first_rna  # 03Jan2023 change to use rna instread of trna -- tho unless last_rna is 12S they are the same
 run_if_no_file create_wrap_around_cr_dist_file  $dist_file
 run_if_no_file get_wrap_around_cr_stats         $stat_file
 

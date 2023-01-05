@@ -155,7 +155,7 @@ function orient_megahit_rec { # leave as is or revcomp depending on best mito ma
 
    if [ ! -z "$do_rc" ]; then # need to revcomp megahit_best.fa
       msglog_module "revcomp megahit_best.fa"
-      bawk '{print ">"$name"_RC " $comment; print $seq}' megahit_best.fa > bootstrap_rec.fa
+      bawk '{print ">"$name"_RC " $comment; print revcomp($seq)}' megahit_best.fa > bootstrap_rec.fa
    else # create softlink to megahit_best.fa
       ln -s megahit_best.fa bootstrap_rec.fa
    fi
@@ -202,7 +202,7 @@ function extract_recs {
       {print ">" $name suffix " QPct:" qpct addtl; print $seq; pulled++}
 
       function goosehairpin_pos() {
-         return match($seq, /CCCCCCC[AGT]{1,3}CCCCCCC/)
+         return match($seq, /CCCCCCC[AGT][AGT]?[AGT]?CCCCCCC/))   # nawk does not support quantification notation /CCCCCCC[AGT]{1,3}CCCCCCC/) so use ? twice
       }
    ' <(prefix_gt bootstrap_blast_hits_to_input.tsv) <(cat_input_files) | fold -w 120 > bootstrap_matching_recs.fasta
 

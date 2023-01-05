@@ -38,7 +38,7 @@ awk '
    {
       line++; start=$2
       dist_from_last = (line==1) ? 1 : start - end # this ones start last ones end
-      name=$1; end=$3; score=$5; model=$8; strand=$9; phase="."
+      name=$1; end=$3; score=$5; feat=$7; model=$8; strand=$9; phase="."
    }
 
    model ~ "^Metazoa" {  # mitfi trna
@@ -66,12 +66,12 @@ awk '
       end = cr_end  # use control region end to calculate distance from the next one
       next
    }
-   model ~ "OL.cm" {  # OL
+   model ~ "OL.cm" || feat == "OL" {  # OL
       id = sprintf("symbol=%s;type=%s;model=%s;distance_from_last=%d", $7, $6, model, dist_from_last)
       print name, "cmsearch", "rep_origin", start, end, score, strand, phase, id
       next
    }
-   model ~ "OH.cm" {  # OH
+   model ~ "OH.cm" || feat == "OH" {  # OH
       id = sprintf("symbol=%s;type=%s;model=%s;distance_from_last=%d", $7, $6, model, dist_from_last)
       print name, "blastn", "rep_origin", start, end, score, strand, phase, id
       next

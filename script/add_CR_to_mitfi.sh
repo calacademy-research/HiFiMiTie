@@ -38,7 +38,7 @@ else
    }
 
    FNR==NR && /^CR[1-9]_flanks/ {
-      prev_trna = substr($2, 1,1); succ_trna = substr($3, 1,1)
+      prev_trna = substr($2, 1,1); succ_trna = substr($3, 1,1)   # BUG: expecting 1 letter which will not always be the case
       id = substr($1, 1,3)
       cr_id[prev_trna] = id
       cr_prev[id] = prev_trna
@@ -57,7 +57,7 @@ else
    }
 
    $7=="gh" {if(gh_str==""){ gh_str=$0 } else{ gh_str=gh_str"\n"$0 };next}
-   CR_starts_at > 0 && $7 != "gh" && $2 > CR_starts_at {  # ends one pos before beginning of this feature
+   CR_starts_at > 0 && $7 != "gh" && $7 != "OH" && $2 > CR_starts_at {  # ends one pos before beginning of this feature
        write_CR(CR_starts_at, $2-1)
    }
 
@@ -66,6 +66,6 @@ else
    END {
       if (CR_starts_at > 0)
          write_CR(CR_starts_at, asmlen)
- } ' $settings $mitfi
+ } ' $settings $mitfi | sort -k2,2n -k3,3nr
 
 fi
