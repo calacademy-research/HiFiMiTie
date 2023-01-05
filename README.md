@@ -64,7 +64,7 @@ Example forthcoming.
 
 Not now, but eventually this should require cloning this repo to say ~/bin/HiFiMiTie then creating a softlink `ln -s ~/bin/HiFiMiTie/hifimitie.sh ~/bin/hifimitie` and another one `ln -s ~/bin/hifimitie ~/bin/hfmt` and downloading the dependencies. The command ``hifimitie check`` checks for the existence of the major dependencies.
 
-### Discussion
+### Introduction
 
 HiFiMiTie works on low-error long PacBio HiFi reads to identify and annotate metazoan mitochondrial reads and create a consensus mitochondrion from these reads.
 This consensus is compared with a result from the program Megahit and based on the annotations of each the best one is chosen as the representative and an annotation
@@ -75,6 +75,41 @@ This analysis and the blasts of the local mito database downloaded from GenBank 
 It might not seem worthwhile for all the extra effort for the additional read analysis and consensus mitochondrion. However, although there is typically a
 great deal of agreement between the Megahit result and the sequence consensus result, in almost every instance seen so far the Megahit version
 incorrectly assembles some portion or portions of the mito genome, at a minimum the Control Region.
+
+### Pipeline
+
+#### Init
+
+To begin HiFiMiTie (aka hfmt) a taxonomic numeric is provided and one or more fasta or fastq files containing the PacBio HiFi reads (gzipped or not)
+are provided in one or more `hfmt init` commands. The program guides the user through the choice of the taxonomic number if an alphabetic string is used.
+
+The taxonomic identifier has two purposes. One is to limit the blast search of the HiFi reads to likely relevant mitochondrial records in the local mito database.
+Although the information about the number of relevant mitochondria is of interest, the entire mito db could easily be searched in about the same time as the subset
+(at least at present when there are so few total mitochrondrial genomes in the GenBank mito database).
+
+The other purpose is to determine the first tRNA from which to start the mitochondrial sequence.
+It is also assumed this tRNA will often be the ending flank of a Control Region (though not true for Cnidaria for example). Though a second Control Region can be
+identified in other positions of the sequence. The mito database has been processed so the distribution of first tRNAs for each taxonomic level can be interrogated.
+So the taxonomic level is used as one way to determine tRNA to start the sequence. Another is the first tRNA of the most closely related hit from the mito db search.
+And it is also possible using `hfmt settings first_trna <trna sym>` for the user to set this explicitly.
+
+The taxonomic level is usually what is used unless the user manually sets this. One reason for this is that some groups rotate the mito sequences to start at F in all instances.
+Though this is true for `Vertebrata: F 5811, L1 99, V 82, S2 45, T 38, I 29, P 10, L2 9, E 4, G 4, W 4, C 2, H 2` it is not so e.g. for
+`Lepidoptera: M 523, L2 14, I 11, G 4, V 4, W 4, F 1, L1 1, Q 1` though some groups are adding lepidoptera mitogenomes that start with F to GenBank.
+
+#### Mito DB blast search and Candidate record pull
+
+The HiFi read file(s) set in the init command(s) are used as the query into the mito database with the taxidlist argument used
+to limit the search to those matching the taxonomic numeric specified. The blast tsv output uses the qcovus field so that 
+the total percentage of a query read that matches a mitochondrion is recorded.
+
+The blast tsv list is read and then the HiFI reads files are read.
+HiFi reads in the blast tsv are kept as a candidate set for those with a 50% or greater qcovus match.
+
+#### Create set of Mito records with bootstrapping
+
+The candidate set of HiFi reads is is used as input to Megahit to create a preliminary assembly and 
+
 
 ### Notes
 
