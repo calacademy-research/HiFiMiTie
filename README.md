@@ -64,6 +64,18 @@ Example forthcoming.
 
 Not now, but eventually this should require cloning this repo to say ~/bin/HiFiMiTie then creating a softlink `ln -s ~/bin/HiFiMiTie/hifimitie.sh ~/bin/hifimitie` and another one `ln -s ~/bin/hifimitie ~/bin/hfmt` and downloading the dependencies. The command ``hifimitie check`` checks for the existence of the major dependencies.
 
+### Discussion
+
+HiFiMiTie works on low-error long PacBio HiFi reads to identify and annotate metazoan mitochondrial reads and create a consensus mitochondrion from these reads.
+This consensus is compared with a result from the program Megahit and based on the annotations of each the best one is chosen as the representative and an annotation
+of it is created. Megahit creates a kmer based result very quickly and the sequence consensus based version takes quite a bit longer
+-- mostly due to the time it takes to do covariance matrix analysis of the tRNA and rRNA elements of each of the subject mitochondrial reads.
+This analysis and the blasts of the local mito database downloaded from GenBank is where execution threads are most useful if you can allow the program to use them.
+
+It might not seem worthwhile for all the extra effort for the additional read analysis and consensus mitochondrion. However, although there is typically a
+great deal of agreement between the Megahit result and the sequence consensus result, in almost every instance seen so far the Megahit version
+incorrectly assembles some portion or portions of the mito genome, at a minimum the Control Region.
+
 ### Notes
 
 First versions relied upon close mitochondrial references from other taxa. Though this is often the case it is not always a good idea to rely solely upon this.
