@@ -83,6 +83,9 @@ incorrectly assembles some portion or portions of the mito genome, at a minimum 
 To begin HiFiMiTie (aka hfmt) a taxonomic numeric is provided and one or more fasta or fastq files containing the PacBio HiFi reads (gzipped or not)
 are provided in one or more `hfmt init` commands. The program guides the user through the choice of the taxonomic number if an alphabetic string is used.
 
+Also the first time the hfmt init command is executed it creates a directory with the format hfmt_<date>, e.g. hfmt_110322.
+Subsequent runs of the hfmt command in the directory will create files in this hfmt_<date> directory.
+
 The taxonomic identifier has two purposes. One is to limit the blast search of the HiFi reads to likely relevant mitochondrial records in the local mito database.
 Although the information about the number of relevant mitochondria is of interest, the entire mito db could easily be searched in about the same time as the subset
 (at least at present when there are so few total mitochrondrial genomes in the GenBank mito database).
