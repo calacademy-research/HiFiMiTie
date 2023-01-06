@@ -76,15 +76,15 @@ It might not seem worthwhile for all the extra effort for the additional read an
 great deal of agreement between the Megahit result and the sequence consensus result, in almost every instance seen so far the Megahit version
 incorrectly assembles some portion or portions of the mito genome, at a minimum the Control Region.
 
-### Pipeline
+### Pipeline gloss
 
 #### Init
 
 To begin HiFiMiTie (aka hfmt) a taxonomic numeric is provided and one or more fasta or fastq files containing the PacBio HiFi reads (gzipped or not)
 are provided in one or more `hfmt init` commands. The program guides the user through the choice of the taxonomic number if an alphabetic string is used.
 
-Also the first time the hfmt init command is executed it creates a directory with the format hfmt_<date>, e.g. hfmt_110322.
-Subsequent runs of the hfmt command in the directory will create files in this hfmt_<date> directory.
+Also the first time the hfmt init command is executed it creates a directory with the format hfmt_\<date\>, e.g. hfmt_110322.
+Subsequent runs of the hfmt command in the directory will create files in this hfmt_\<date\> directory.
 
 The taxonomic identifier has two purposes. One is to limit the blast search of the HiFi reads to likely relevant mitochondrial records in the local mito database.
 Although the information about the number of relevant mitochondria is of interest, the entire mito db could easily be searched in about the same time as the subset
