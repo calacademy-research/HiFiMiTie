@@ -165,6 +165,11 @@ function trna1_trna2_recs { # was pro_phe_recs
    grep -e "^${first_3_let}_" -e "${first_1_let}.*${second_1_let}" $dist_file
 }
 
+function prefix_name { # we add trn if item is 1 char otherwise leave as is
+   echo $1 | awk '
+      length($1)==1{pfx="trn"}
+      {print pfx $1; exit}'
+}
 function set_cr_filenames {  # can call with two args for trna or use the first_trna and last_trna currently set
    fiveprime_flank=$1
    threeprime_flank=$2
@@ -172,8 +177,12 @@ function set_cr_filenames {  # can call with two args for trna or use the first_
    [ -z $fiveprime_flank ] && fiveprime_flank=$last_trna
    [ -z $threeprime_flank ] && threeprime_flank=$first_trna
 
-   dist_file=${cr_dir}/trn${fiveprime_flank}_trn${threeprime_flank}_distances.tsv
-   stat_file=${cr_dir}/ControlRegion_btw_trn${fiveprime_flank}_trn${threeprime_flank}_length.stats
+   rna1=$(prefix_name $fiveprime_flank)
+   rna2=$(prefix_name $threeprime_flank)
+   rna_specfic=${rna1}_${rna2}
+
+   dist_file=${cr_dir}/${rna_specfic}_distances.tsv
+   stat_file=${cr_dir}/ControlRegion_btw_${rna_specfic}_length.stats
 }
 
 # 02Jan2023 use the cm anno file to get CR length instead of the blast results from a close mito taxon
@@ -186,6 +195,7 @@ m64044_201205_132125/53936795/ccs       7576    7644    59.59   6.31E-12        
 # this reports seq name, CR beg, CR end, CR length from the mito_hifi_recs.cm_anno file
 function CR_info_from_cm_anno {
    local annoFile=$cm_dir/mito_hifi_recs.cm_anno
+   local oneLineAnnoFile=$cm_dir/one_line_per_rec.cm_anno.srt  # use this to make exclusion list for template mismatch recs
    local start_flank=$1; local end_flank=$2
 
    unset err
@@ -193,10 +203,19 @@ function CR_info_from_cm_anno {
    [ ! -z $err ] && msglog_module "$err not specified for CR_dist_from_cm_anno" && return 1
 
    awk -v start_flank=$start_flank -v end_flank=$end_flank '
-      BEGIN{FS="\t"; OFS="\t"}
+       BEGIN{FS="\t"; OFS="\t"}
+
+      FNR==NR {  # use the one line rec anno file to exclude the recs with template mismatches
+         if (match($0, "# T"))
+            template_mismatch[$1]++
+         next
+      }
+
       $1 in seen{ next }
+
       $7 == start_flank{ start_flank_endpos[$1] = $3 }
       $7 == end_flank && $1 in start_flank_endpos {  # only acknowledge end_flank if start flank already seen
+         if ($1 in template_mismatch) { exclude++; next }
          end_flank_begpos[$1] = $2
          CR_start = start_flank_endpos[$1] + 1
          CR_end = end_flank_begpos[$1] - 1
@@ -204,7 +223,8 @@ function CR_info_from_cm_anno {
          print $1, CR_start, CR_end, CR_len
          delete start_flank_endpos[$1]; seen[$1]++
       }
-   ' $annoFile
+      END { if(exclude) printf("Excluded %s in CR analysis for template mismatch\n", exclude) > "/dev/stderr" }
+   ' $oneLineAnnoFile $annoFile
 }
 
 # this pulls the CR length field from the info and sorts and counts these lengths

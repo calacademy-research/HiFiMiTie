@@ -65,8 +65,8 @@ function set_trna_vars {
    last_trna=$(get_setting_or_default "last_trna" "P")
 
    # working toward allowing 12S as last_trna
-   first_rna=$(get_setting_or_default "first_trna" $first_trna)
-   last_rna=$(get_setting_or_default "last_trna" $last_trna)
+   first_rna=$(get_setting_or_default "first_rna" $first_trna)
+   last_rna=$(get_setting_or_default "last_rna" $last_trna)
 
    gh_prev_trna=$(get_setting_or_default "gh_prev_trna" $last_trna)
    gh_succ_trna=$(get_setting_or_default "gh_succ_trna" $first_trna)

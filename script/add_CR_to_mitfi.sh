@@ -38,13 +38,13 @@ else
    }
 
    FNR==NR && /^CR[1-9]_flanks/ {
-      prev_trna = substr($2, 1,1); succ_trna = substr($3, 1,1)   # BUG: expecting 1 letter which will not always be the case
-      id = substr($1, 1,3)
-      cr_id[prev_trna] = id
-      cr_prev[id] = prev_trna
+      prev_rna = $2; succ_rna = $3  # was using only first char of field but flank could be 12S so not a single char: use entire space delimited field
+      id = substr($1, 1,3)  # CR1 or CR2
+      cr_id[prev_rna] = id
+      cr_prev[id] = prev_rna
    }
    FNR==NR && /^CR[1-9]_type/ {
-      id = substr(1,3, $1)
+      id = substr($1, 1,3)  # CR1 or CR2
       cr_type[id] = $2
    }
    FNR==NR{ next }

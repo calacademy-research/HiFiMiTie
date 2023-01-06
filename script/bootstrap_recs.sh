@@ -202,7 +202,7 @@ function extract_recs {
       {print ">" $name suffix " QPct:" qpct addtl; print $seq; pulled++}
 
       function goosehairpin_pos() {
-         return match($seq, /CCCCCCC[AGT][AGT]?[AGT]?CCCCCCC/))   # nawk does not support quantification notation /CCCCCCC[AGT]{1,3}CCCCCCC/) so use ? twice
+         return match($seq, /CCCCCCC[AGT][AGT]?[AGT]?CCCCCCC/)   # nawk does not support quantification notation /CCCCCCC[AGT]{1,3}CCCCCCC/) so use ? twice
       }
    ' <(prefix_gt bootstrap_blast_hits_to_input.tsv) <(cat_input_files) | fold -w 120 > bootstrap_matching_recs.fasta
 

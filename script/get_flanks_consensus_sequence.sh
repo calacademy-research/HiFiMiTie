@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# get a consensus sequence form the flanks in the cm_results CR split sequence file
+# get a consensus sequence from the flanks in the cm_results CR split sequence file
 # it must have the format used in the cm_results split CR file for this to work
 # in particular CR seq is uppercase flanks lowercase
 
