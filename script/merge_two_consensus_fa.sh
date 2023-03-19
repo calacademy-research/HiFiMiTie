@@ -3,12 +3,32 @@
 # sometimes using mafft to merge the two pieces can be a problem. especially if the consensus for the ending portion encomapasses the beginning trna
 
 # so this module will use mitfi to identify the trnas in the both sequences.
-# the last entry in the beginning consensus sequence's mitfi will be search for in the endiing sequence mitfi to get the ending position of it
+# the last entry in the beginning consensus sequence's mitfi will be searched for in the ending sequence mitfi to get the ending position of it
 # then we will append everthing after that to the beginning sequence to create: non_cr_consensus.fasta
 
+################################################################################
+#                              utility functions                               #
+################################################################################
+
+function usage {
+   msg "\n    usage: merge_two_consensus_fa.sh <begin seq file> <end seq file>\n"
+   exit 1
+}
+
+# if for HiFiMiTe can delete this one
 function msg {
    echo -e "$@" >/dev/stderr
 }
+
+function get_fld {
+   line="$1"
+   fld=$2  # field number
+   awk -v fld=$fld '{print $fld; exit}' <(echo $line)
+}
+
+################################################################################
+#                                main functions                                #
+################################################################################
 
 function create_mitfis {
    beg_mitfi=$(echo $begseq | sed "s/\.[a-zA-Z]*$/.mitfi/")
@@ -16,12 +36,7 @@ function create_mitfis {
 
    [ ! -s $beg_mitfi ] && msg "$begseq" && mitfi.sh -code $code -onlycutoff $begseq > $beg_mitfi
    [ ! -s $end_mitfi ] && msg "$endseq" && mitfi.sh -code $code -onlycutoff $endseq > $end_mitfi
-}
 
-function get_fld {
-   line="$1"
-   fld=$2  # field number
-   awk -v fld=$fld '{print $fld; exit}' <(echo $line)
 }
 
 function set_last_beg_entry_info {
@@ -60,7 +75,7 @@ function write_merged_fa {
          print prefix
       }
 
-      FNR != NR {
+      FILENUM > 1 {
          suffix=substr($seq, begpos)
          print suffix
          exit
@@ -68,12 +83,21 @@ function write_merged_fa {
    ' $begseq $endseq
 }
 
+################################################################################
+#                                 starts here                                  #
+################################################################################
+
 ## set input vars ##
+
 begseq=$1
 endseq=$2
+
+[ ! -s $begseq ] && usage; [ ! -s $endseq ] && usage
+
 code=$3; [ -z $code ] && code=5
 
 ## do the work ##
+
 create_mitfis
 set_last_beg_entry_info
 set_endseq_info

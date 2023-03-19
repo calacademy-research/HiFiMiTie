@@ -123,7 +123,7 @@ function run_megahit {
    cd $bootstrap_dir
 
    msglog_module "creating boostrap assembly with megahit from $mito_fasta_recs_to_assemble"
-   msglog_module "megahit -t $threads -r $mito_fasta_recs_to_assemble"
+   msglog_module "megahit -t $threads -r ../mito_hifi_candidates.fasta"
    megahit -t $threads -r $mito_fasta_recs_to_assemble
 
    cd megahit_out
@@ -154,9 +154,10 @@ function orient_megahit_rec { # leave as is or revcomp depending on best mito ma
    do_rc=$(awk '$9 > $10{print "RC"}{exit}' blast_hits_for_revcomp_check.tsv)
 
    if [ ! -z "$do_rc" ]; then # need to revcomp megahit_best.fa
-      msglog_module "revcomp megahit_best.fa"
+      msglog_module "revcomp megahit_best.fa to bootstrap_rec.fa"
       bawk '{print ">"$name"_RC " $comment; print revcomp($seq)}' megahit_best.fa > bootstrap_rec.fa
    else # create softlink to megahit_best.fa
+      msglog_module "ln -s megahit_best.fa bootstrap_rec.fa"
       ln -s megahit_best.fa bootstrap_rec.fa
    fi
 

@@ -13,8 +13,8 @@ src_dir=$(dirname $(realpath $(which hifimitie) ) )
 shared_loaded="true"
 
 # replace these and also the lines in usage.sh when the title or version number changes
-hfmt_version=0.07
-hfmt_version_date=06-Jan-2023
+hfmt_version=0.08
+hfmt_version_date=19-Mar-2023
 hfmt_title="HiFiMiTie version $hfmt_version -- Find & Analyze Metazoan Mitochondria from HiFi reads [$hfmt_version_date]"
 
 script_dir=${src_dir}/script

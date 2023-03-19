@@ -83,7 +83,7 @@ function set_seq_filenames {
    # get the 3 sequence file paths
    fasta_trna_to_end=$(ls $splitseq_dir/*_end.fasta)
    fasta_beg_to_trna=$(ls $splitseq_dir/beg_*.fasta)
-   fasta_CR_btw_trnas=$(ls $splitseq_dir/[A-Z]*_CR_*.fasta)
+   fasta_CR_btw_trnas=$(ls $splitseq_dir/[1A-Z]*_CR_*.fasta)
 
    if [ -z "$fasta_trna_to_end" ] || [ -z "$fasta_beg_to_trna" ] || [ -z "$fasta_CR_btw_trnas" ]; then
       false
@@ -110,7 +110,7 @@ function set_seq_filenames {
    msa_mito_fa_path=${alignasm_dir}/$msa_mito_fa
 }
 
-# DEPRECATE: this can have issues is overlaps replace with function following
+# DEPRECATE: this can have issues if overlaps. replace with function following
 function make_consensus_of_two_non-cr_consensus_outputs {
    [ -s $path_non_cr_consensus ] && run_if_no_file noop $path_non_cr_consensus && return
 
@@ -183,7 +183,7 @@ function search_12S_16S {
    local mito_fasta=$(realpath $1)
 
    set_fastx_basename $mito_fasta
-   local pfx=${fastx_basename}
+   local pfx=$fastx_basename
 
    tbl_12S=${pfx}_rrnS.tbl
    tbl_16S=${pfx}_rrnL.tbl
@@ -213,7 +213,7 @@ function anno_fasta { # mitfi file and one with gh and 12S and 16S file added cr
    local fasta=$1
    [ ! -s "$fasta" ] && msglog_module $fasta not found or empty && return 1
 
-   mitfi_fasta $fasta
+   mitfi_fasta $fasta "-onlycutoff"
    do_OL_search $fasta
    search_12S_16S $fasta
 
@@ -233,13 +233,17 @@ function anno_fasta { # mitfi file and one with gh and 12S and 16S file added cr
    [ -s ${pfx}.cm_anno ] && msglog_module $(basename ${pfx}.cm_anno) created with rrnS, rrnL, cr and any goose hairpin added to mitfi results
 
    if [ -s ${pfx}.cm_anno ]; then  # 01Dec2022 add genes to anno
-         if [ ! -s ${pfx}.anno ]; then
-            ${script_dir}/mito_pcg_anno.sh $fasta ${pfx}.cm_anno | add_header_to_anno > ${pfx}.anno
-            [ -s ${pfx}.anno ] && msglog_module "$(basename ${pfx}.anno ) with genes added to ${pfx}.cm_anno created for $(basename $fasta)"
-         else
-            msg $(basename ${pfx}.anno) already created
-         fi
+      if [ ! -s ${pfx}.anno ]; then
+         ${script_dir}/mito_pcg_anno.sh $fasta ${pfx}.cm_anno | add_header_to_anno > ${pfx}.anno
+         [ -s ${pfx}.anno ] && msglog_module "$(basename ${pfx}.anno ) with genes added to ${pfx}.cm_anno created for $(basename $fasta)"
+      else
+         msg $(basename ${pfx}.anno) already created
       fi
+   fi
+
+   # mitif_fasta sets the mitfi_file var, set cm_anno_file and anno_file var here
+   cm_anno_file=${pfx}.cm_anno
+   anno_file=${pfx}.anno
 }
 
 function make_no_cr_mito_fasta  {
@@ -257,25 +261,75 @@ function make_no_cr_mito_fasta  {
 
    seqlen=$(bawk '{print length($seq);exit}' $path_non_cr_consensus)
 
-   [ ! $entry_succ = "1" ]  && msglog_module "WARNING: expected $cr_succ_trna to be first trna. reported as number $entry_succ"
-   [ ! $entry_prev = "22" ] && msglog_module "WARNING: expected $cr_prev_trna to be 22nd trna. reported as number $entry_prev"
+   (( entry_succ != 1 )) && msglog_module "WARNING: expected $cr_succ_trna to be first rna. reported as number $entry_succ"
+   (( entry_prev < 22 )) && msglog_module "WARNING: expected $cr_prev_trna to be 22nd or later rna. reported as number $entry_prev"
 
    let remove_at_beg=beg_succ-1
    let remove_at_end=seqlen-end_prev
    let newlen=seqlen-remove_at_beg-remove_at_end
-   msglog_module removing $remove_at_beg from beginning and removing $remove_at_end from the end to create ${newlen}bp $msa_no_cr_mito_fa
 
-   bawk -v begremove=$remove_at_beg -v endremove=$remove_at_end -v tb=$tb -v te=$te '{
-      newseq = substr($seq, begremove+1)
-      slen = length(newseq)
-      if(endremove) newseq = substr(newseq, 1, slen-endremove)
-      printf(">mitochondrial_sequence_from_%s_to_%s_excluding_CR length %d\n", tb, te, length(newseq))
-      print newseq
-   }' $path_non_cr_consensus >$msa_no_cr_mito_fa_path
+   if (( newlen > 1000 )); then
+      msglog_module removing $remove_at_beg from beginning and removing $remove_at_end from the end to create ${newlen}bp $msa_no_cr_mito_fa
+
+      bawk -v begremove=$remove_at_beg -v endremove=$remove_at_end -v tb=$tb -v te=$te '{
+         newseq = substr($seq, begremove+1)
+         slen = length(newseq)
+         if(endremove) newseq = substr(newseq, 1, slen-endremove)
+         printf(">mitochondrial_sequence_from_%s_to_%s_excluding_CR length %d\n", tb, te, length(newseq))
+         print newseq
+      }' $path_non_cr_consensus >$msa_no_cr_mito_fa_path
+   else
+      msglog_module Problem with CR flank definition. Leaving $msa_no_cr_mito_fa as is.
+      cp -a $path_non_cr_consensus $msa_no_cr_mito_fa_path
+   fi
+
    [ -s $msa_no_cr_mito_fa_path ] && msglog_module $msa_no_cr_mito_fa created
 }
 
+# 10Jan23 make a file in the consensus directory that is just the CR. ie remove the begin trna or rna sequence and ending trna sequence
+# and output CR_consensus.fa in the consensus dir -- we were doing this in place but better to have as a separate file for several reasons.
+function get_CR_pos_in_flank_file {
+   local path_CR_with_flanks=$1
+   anno_fasta $path_CR_with_flanks  # creates mitfi_file, cm_anno and anno vars to point to files it made
+
+   ele_lines=$(grep -v "^#" -c $cm_anno_file)
+   (( ele_lines != 3 )) && msglog_module "Expected 3 lines in $cm_anno, got $ele_lines"
+
+   awk '
+      $7 == "cr" && CR_start==0 && CR_end==0 {
+          CR_start = $2; CR_end = $3; info = ">" CR_start " " CR_end
+          print info
+          print "CR position between flanks " substr(info,2) >"/dev/stderr"
+      }
+   ' <(grep -v "^#" $cm_anno_file)
+}
+
+function pull_CR_from_flanks {
+   local path_CR_with_flanks=$1
+
+   bawk '
+      FILENUM==1 { CR_start = $name; CR_end = $comment; CR_len = int(CR_end - CR_start + 1); next }
+      FILENUM==2 {
+         print ">CR_msa_consensus " CR_len "nt";
+         print substr($seq, CR_start, CR_len)
+      }
+   ' <(get_CR_pos_in_flank_file $path_CR_with_flanks) $path_CR_with_flanks
+}
+
 function make_consensus_mito {
+   CR_file=$(dirname $path_consensus_CR_btw_trnas)/CR_consensus.fa
+
+   pull_CR_from_flanks $path_consensus_CR_btw_trnas >$CR_file
+
+   bawk '
+      FILENUM==1 { print ">msa_consensus_mitochondrion\n" $seq }
+      FILENUM==2 { print $seq }
+   ' $msa_no_cr_mito_fa_path $CR_file > $msa_mito_fa_path
+
+   [ -s $msa_mito_fa_path ] && msglog_module $msa_mito_fa created
+}
+
+function DEPRECATED_VERSION_make_consensus_mito {
    cr_succ_trna=$(get_setting_or_default gh_succ_trna F); tb=$(three_letter_AA $cr_succ_trna)
    cr_prev_trna=$(get_setting_or_default gh_prev_trna E); te=$(three_letter_AA $cr_prev_trna)
 
@@ -294,7 +348,7 @@ function make_consensus_mito {
    [ ! $no_cr_prev_entry = "22" ] && msglog_module "WARNING: expected $cr_prev_trna to be 22nd trna of $msa_no_cr_mito_fa. reported as number $entry_prev"
 
    # extract just CR from the consensus by removing the trna flank sequence
-   # if cr_succ_trna is not the same as the first_trna setting we will need to reflow to put this at the beginning
+   # if cr_succ_trna is not the same as the first_trna setting we will need to reflow to put this at the beginning after this function finishes
    bawk -v prev_end=$cr_prev_end -v succ_beg=$cr_succ_beg '
     FNR==NR { print ">msa_consensus_mitochondrion\n" $seq }
     FNR!=NR {
@@ -346,6 +400,8 @@ function check_for_tandem_repeats {
 
    add_repeats_to_anno
 }
+
+# DEPRECATE: the report line can contain multiple repeats for the assembly
 function get_formatted_trf_line {  # depends on trf_stats being set and a file. check before calling
    head -n 1 $trf_stats |
    awk  'BEGIN{OFS="\t"}
@@ -353,6 +409,28 @@ function get_formatted_trf_line {  # depends on trf_stats being set and a file. 
       printf("%s\t%s\t%s\t.\t.\trepeat\tRepeat Region\t+\t%s copies %s bp consensus: %s\n", $1, $3, $7, $9,$13,$NF)}
    '
 }
+
+# this will output multiple lines for repeats if thaere are more than one
+function anno_repeats_from_trf_stats_report {
+   rpt_file=$1
+   [ ! -s $rpt_file ] && return
+
+   cawk -t '{
+      print $1; add = 4  # first line is file name oterh lines are all the repeat info
+      for(f = 3; f < NF; f += add+1) {
+         print fldcat(f,f+add,"\t")}
+      }
+   ' $rpt_file | sed "s/--/\t/" |
+   cawk '
+      NR==1 { fname = $1; next }
+
+      {
+         printf("%s\t%s\t%s\t%s\t.\t.\trepeat\tRepeat Region\t+\t%s copies %s bp consensus: %s\n",
+                  fname, $1, $2, $6, $8,$12,$NF)
+      }
+   '
+}
+
 function add_repeats_to_anno {
    anno=$aligncm_dir/mito_msa.anno
    trf_stats=$msa_trf_dir/trf_stats_report.tsv
@@ -361,20 +439,29 @@ function add_repeats_to_anno {
 
    [ ! -s $anno ] && return 3; [ ! -s $trf_stats ] && return 4
 
-   if [ ! -z "$(get_formatted_trf_line)" ]; then
+   repeat_results=$(anno_repeats_from_trf_stats_report $trf_stats)
+
+   if [ ! -z "$repeat_results" ]; then
       cawk -t '
          FILENUM==1 && FNR==1{trf_start = $2; trf_end = $3; trf_line = $0}
+         FILENUM==1 { trf_lines[++trf_count] = $0 }
 
          FILENUM==2 && /^#/ {print; next}
          FILENUM==2 {
             if ($2 > trf_start && ! trf_prtd) {
-               print trf_line
-               trf_prtd = 1
+               prt_repeats()
             }
             print
          }
-         END { if (! trf_prtd) print trf_line }
-      ' <(get_formatted_trf_line) $anno > $trf_anno
+         END { if (! trf_prtd) prt_repeats() }
+
+         function prt_repeats() {
+            # print trf_line  13MAR2023 can be more than one repeat, output them all here
+            for (r=1; r <= trf_count; r++)
+               print trf_lines[r]
+            trf_prtd = trf_count
+         }
+      ' <(anno_repeats_from_trf_stats_report $trf_stats) $anno > $trf_anno  # 13Mar2023 replace get_formatted_trf_line with anno_repeats_from_trf_stats_report
 
       anno_size=$(stat -c %s $anno)
       trf_anno_size=$(stat -c %s $trf_anno)
@@ -387,17 +474,18 @@ function add_repeats_to_anno {
    fi
 }
 
-# 11Aug2022 this currently uses gh_succ_trna and gh_prev_trna when if missing defaults as F P
+# 11Aug2022 this currently uses gh_succ_trna and gh_prev_trna if missing defaults such as F P
 # gh is often not found so this is flawed. what we will do here is set these from more rational presumptions if they
 # have not already been set. also later on we may use OH setting alone or in tandem with gh
-# but always need to handle possibility than only first_trna and last_trna is set (and we may expand to all 12S for last_trna later)
+# but always need to handle possibility that only first_trna and last_trna is set (and we may expand to all 12S for last_trna later)
 function clean_up_cr_settings {
    gh_succ=$(get_setting gh_succ_trna)
    gh_prev=$(get_setting gh_prev_trna)
 
-   [ -z $gh_succ ] && update_setting gh_succ_trna $(get_setting_or_default first_trna F)
-   [ -z $gh_prev ] && update_setting gh_prev_trna $(get_setting_or_default last_trna P)
+   [ -z $gh_succ ] && update_setting gh_succ_trna $(get_setting_or_default first_rna F)
+   [ -z $gh_prev ] && update_setting gh_prev_trna $(get_setting_or_default last_rna P)
 }
+
 
 ###############################################################################
 #                                do the work                                  #
@@ -421,17 +509,19 @@ run_if_no_file noop $path_consensus_CR_btw_trnas
 # 05Sep2022 replace above with merge which relies on mitfi of the 2 consensus sequences
 merge_two_non-cr_consensus_fa
 
-# clean up the non-cr_consensus file to create the final msa_no_cr_mito.fasta, this requires the mitfi file for the consensus
-mitfi_fasta $path_non_cr_consensus "-onlycutoff"
-path_no_cr_mitfi=$mitfi_file
+# clean up the non_cr_consensus.fasta file to create the final msa_no_cr_mito.fasta, this requires the mitfi file for the consensus
+# need more anno than mitfi since 12S can be begining flank of CR, anno_fasta does mitfi_file, cm_anno_file and anno_file with pcgs
+#mitfi_fasta $path_non_cr_consensus "-onlycutoff"
+anno_fasta $path_non_cr_consensus
+path_no_cr_mitfi=$cm_anno_file   # 07Jan23 was $mitfi_file but we need the 12S and 16S items too
 
 run_if_no_file make_no_cr_mito_fasta $msa_no_cr_mito_fa_path
 anno_fasta $msa_no_cr_mito_fa_path
 path_mitfi_msa_no_cr_mito=$mitfi_file
 
-# get the trna info for the CR consensus flanked by the trna
-mitfi_fasta $path_consensus_CR_btw_trnas "-onlycutoff"
-path_mitfi_CR_btw_trnas=$mitfi_file
+# get the trna info for the CR consensus flanked by the trna or 12S rna (12S rna added 10Jan23)
+anno_fasta $path_consensus_CR_btw_trnas "-onlycutoff"
+path_mitfi_CR_btw_trnas=$cm_anno_file  # 12Jan23 change from mitfi_file to cm_anno_file
 
 # take the msa_no_cr_mito_fa and append the consensus CR
 run_if_no_file make_consensus_mito $msa_mito_fa_path

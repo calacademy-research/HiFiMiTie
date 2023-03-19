@@ -21,7 +21,7 @@ function msg_for_CR_search {
    msglog ""
    msglog_module "Control region repeat diversity can cause the mitodb blast to skip some relevant HiFi reads"
    msglog_module "Use CR flanks $cr_begin_flank and $cr_end_flank to search the HiFi reads for these flanks (edit distance $maxeditdist)"
-   msglog_module "and pull the flanks and the CR sequence between them into records in a new a fasta file."
+   msglog_module "and pull the flanks and the CR sequence between them into records in a new fasta file."
    msglog ""
 }
 
@@ -77,6 +77,7 @@ function cat_input_files {
 
       msglog_module $hifi_input_file
       cat $hifi_input_file
+      msg ""  # blank line after extraction from this file so if another file at line begin on screen
    done < $fofn
 }
 

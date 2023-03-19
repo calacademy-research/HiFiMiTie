@@ -5,7 +5,7 @@
 
 OH_blast_file=$1
 mitfi=$2
-min_score_for_OH=250  # kludgy way to throw out the OH look alikes hovering over 12S, we'll try for better method later hopefully
+min_score_for_OH=225  # kludgy way to throw out the OH look alikes hovering over 12S, we'll try for better method later hopefully
 
 # [ ! -s $OH_blast_file ] && exit 0
 # [ ! -s $mitfi ] && echo "No mitfi file found for inserting OH lines" && exit 1
