@@ -96,9 +96,11 @@ function Create_alternate_mitos {
          local alternate_dir_name=alternate_control_region_assemblies
          local alternate_mito_path=$complete_dir/alternate_mitos
          [ ! -s $alternate_dir_name ] && ln -s $alternate_mito_path $alternate_dir_name
+         [ ! -s $wdir/$alternate_dir_name ] && ln -s complete/alternate_mitos $wdir/$alternate_dir_name
+
          echo "alternates created" > $alternate_mito_path/alternates.created
          msglog ""
-         touch -c -h ${wdir_path}/mito_note.txt # we want notes file after the softlinks
+         touch -c -h mito_note.txt # we want notes file after the softlinks
       fi
    fi
 }
