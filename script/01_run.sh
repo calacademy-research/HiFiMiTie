@@ -117,6 +117,8 @@ function begin_run {
 
       msg "\nStep 1 -- Setup: taxid and HiFi file(s) to use"
       msg "$(get_setting taxid) $(get_setting taxname) and $num_files $fstr chosen with maximum of $threads threads"
+   else # 21Mar2023 write a file in the dir where the $wdir is located to show command for running this
+      ${script_dir}/synthesize_hifimitie_cmds.sh > hifimitie_cmds.txt
    fi
 }
 
