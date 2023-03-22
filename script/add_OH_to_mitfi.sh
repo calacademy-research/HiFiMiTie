@@ -27,7 +27,7 @@ awk -v min_score_for_OH=$min_score_for_OH '
          next
 
       sub(":.*","",$2)
-      OH_line[$1] = sprintf("%s \t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s", $1, $7, $8, $12, $11, ".", "OH", "blastn", "+")
+      OH_line[$1] = sprintf("%s \t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s", $1, $7, $8, $12, $11, ".", "OH", "OH.fas", "+")
       OH_startpos[$1] = $7  # we will set this to 0 when we output it so we only print it once
       next
    }
@@ -53,5 +53,10 @@ awk -v min_score_for_OH=$min_score_for_OH '
    }
 
    { print }
+
+   END {  # if we have one have not printed it yet it belongs at the end 21Mar2023
+      if (OH_startpos[recid] > 0)
+         print OH_line[recid]
+   }
 
 ' <(cat_OH_file) $mitfi

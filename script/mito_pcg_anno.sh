@@ -56,7 +56,8 @@ function OH_hits {
    local qry=$fasta
    local OH_db=/ccg/bin/HiFiMiTie_dir/data/OrgRepl/OH.fas
 
-   blastn -db $OH_db -query $qry -outfmt  "6 std staxid stitle qlen" -subject_besthit -evalue 9e-55
+   # evalue setting was seen in mitos file runmituos.py
+   blastn -db $OH_db -query $qry -outfmt  "6 std staxid stitle qlen" -subject_besthit -evalue 1e-46
 }
 
 function format_pcg_hits {
