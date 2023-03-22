@@ -70,6 +70,7 @@ function make_range_files {
 function make_msa_from_range_files {
    cr_analysis_dirname msa  # sets CR_dir var
    msa_dir=$CR_dir
+   cr_altnum=0  # global used in other functions
 
    for f in $Range_dir/cr*.fas; do
       local nrecs=$(numrecs $f)
@@ -96,10 +97,9 @@ function make_cr_alts_from_msa_files {
    msa_dir=$CR_dir
    [ ! -d $msa_dir ] && return  # no msa dir, nothing to do
 
-   cr_altnum=0
    for msa in $msa_dir/*.msa; do
       mkdir -p $CR_altdir
-      (( cr_altnum++ ))  # needs to be global
+      (( cr_altnum++ ))  # needs to be global -- was incremented for the 1 rec ones that were copied
       local fa=$CR_altdir/CR_alt${cr_altnum}.fa
 
       consensus_from_fasta_alignment.sh $msa |

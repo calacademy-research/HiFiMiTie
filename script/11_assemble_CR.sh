@@ -6,8 +6,9 @@
 this_dir=$(dirname $(realpath $0)) && source ${this_dir}/shared.sh && this=$(basename $0) # sets msg, is_number functions and usage among other things
 [ -z $wdir ] && msglog_module "The hfmt_<num> working directory not found" && exit 2
 
-trf_path=$(realpath $trf_dir)
-[ ! -d $trf_path ] && mkdir $trf_path
+# trf_output dir in cr_dir no longer used -- do not create it 20Mar2023
+# trf_path=$(realpath $trf_dir)
+# [ ! -d $trf_path ] && mkdir $trf_path
 
 declare -i stddev=0
 stddev_tolerance=20
@@ -27,6 +28,7 @@ function log_use_msa {
 # this is trf_dir or trf_path which is in the cr_analysis directory
 # cr_analysis is where the other results are collected
 
+#DEPRECATED
 function search_for_tandem_repeats {
    local trf_report=trf_stats_report.tsv
 
@@ -53,14 +55,17 @@ function handle_settings {
 
 function just_CR_no_flanks {  # 06Jan2023
    : '
-   >m64049_220702_011313/179112789/ccs_RC_12S_CR_Met 656..1875 1220nt 12S 771 Met 68 CR 381
-   ctaattctagaaacactttccagtacatctactttgttacgacttattccaattttaaaatgaaagcgacgggcaatatgtacatactttaatttttaatcattttattatattaaataaaattacatttaaatccaccttcatttctttattaaaaaaaaaaatccatttaaataaatttattgtaatccatcatattcttaattataatctacatcttgatctgaatt>
-   TTAAATATACATTATTTTACATAGATTTTTTTTTTTTTTTTTTTACGTAAAATTTAATAATAATATTAAACAATTAATAATCTTTCTCTCTCTATTTTCTAATATTAAATTTAAAAATGTATTTAATTATAAATCCTATAATGTTTTAATTTAAATACTAAATATTAATATATTTATATTTATTAAATTTTAATTAATAAATTTTTTATTTTAATATAAATATATATATA>
-   ttaaaaataagctaaataaagcttttgggttcataccccaaatatagaggaaataccttttttttaaa
+   >m64049_230119_192548/96862736/ccs_RC_Pro_CR_Phe 9404..11155 1752nt of 17734 CR 1610
+   tcagaagaaaaggcacaaacctttatcactagtccccaaaactagtattttaattaaactaccctctg
+   AAACACCCCGCTTTTAGACCCCATCTTATTTACACCTGGCTCTGCCACTCAAAAGGGCACCCCCCCATCTTATTTACACCTGGCTCTGCCACTCAAAAGGGCACCCCCCCATCTTAT
+   TTACACCTGGCTCTGCCACTCAAAAGGGCACCCCCCCATCTTATTTACACCTGGCTCTGCCACTCAAAAGGTAAATCGGGGTCTCCCCTTACGCTAAGCATATAATACATACTATGT
+   ATAATTGGACATTCATCTCCCGTCCACACGCATATCACAGCAGATGATTTCCTAATAATTTAACATAACCCATATCACTATAAAATTCACATTAGAATATCTTCTACATCCATATCA
+   TAAAATACCCTAACCTTTTACATTACATACCCATCACATGAAACCTCCAAAATTTACCTACTTACCACTTGCGTATCATCTCCACCCTAACCTACCTACATTACATACCCATTTATC
+   gtttttatagcttaaaaacataaagcacggcactgaagatgccgagataggattacgtaaaaaccttaaaaaca
    '
 
    # make a new fasta file with just the Control Region from the one with the flanks
-   # there is enough info in the header to let us update the CR loc too
+   # there is enough info in the header and lowercase seqs to let us update the CR loc too
 
    # we depend on the header format shown above and that the flanks are in lower case
 
@@ -73,18 +78,40 @@ function just_CR_no_flanks {  # 06Jan2023
       sub("ccs.*", "ccs", nm_str)
       new_name = nm_str addtl
 
-      split($comment, ar, " ")
-      beg_flank_len = ar[4]; end_flank_len = ar[6]; cr_len = ar[8]
+      # new method Mar2023 for header gets the length of the beginning flank here before we delete it
+      mpos = match($seq, "^[a-z]+")
+      if (mpos != 1) { flank_len = 0; print "expected lowercase flank at sequence begin. got: " substr($seq,1,20) "..." > "/dev/stderr" }
+      else { flank_len = RLENGTH }
+      new_beg_pos = int($comment) + flank_len
 
-      split(ar[1], subseq, "[^0-9]+"); beg_pos = subseq[1]; end_pos = subseq[2]  # splitting 656..1875 into 2 element array withthe ints
-      new_beg_pos = beg_pos + beg_flank_len; new_end_pos = end_pos - end_flank_len
-
+      # delete lowercase letters used for the flanks at beginning and end of the sequence
       sub("^[a-z]*", "", $seq); sub("[a-z]*$", "", $seq)
+
+      new_beg_pos = int($comment) + flank_len
+      new_end_pos = new_beg_pos + length($seq) - 1
 
       OFS = " "
       print ">" new_name, new_beg_pos ".." new_end_pos, new_end_pos-new_beg_pos+1 "nt CR", length($seq)
       print $seq
    }' $fasta_w_flanks
+}
+
+function create_no_flank_CR_file_if_needed {
+   [ -s $CR_no_flanks_fasta_name ] && return
+
+   just_CR_no_flanks $generic_name > $CR_no_flanks_fasta_name  # 06Jan23
+
+   source ${script_dir}/get_CR_len_stats.sh
+   run_get_stats_with_tmp <(grep "^>" $CR_no_flanks_fasta_name) > ControlRegion_length.stats  # 19Mar2023
+
+   msglog_module "$CR_no_flanks_fasta_name, ControlRegion_length.stats created"
+   msglog_file ControlRegion_length.stats
+   msglog "" # blank after the file
+
+   local crtag=$(get_setting_or_default Primary_CR CR1)
+   update_setting_if_changed ${crtag}_mean "$mean"
+   update_setting_if_changed ${crtag}_stddev "$stddev"
+   update_setting_if_changed ${crtag}_recs_w_CR "$recs"
 }
 
 function make_softlinks {  # make soft link to CR sequences if not already there -- eg split_sequences/Thr_CR_Pro.fasta
@@ -96,7 +123,7 @@ function make_softlinks {  # make soft link to CR sequences if not already there
    [ ! -s $CR_fasta_name ] && ln -s $CR_fasta_file
    [ ! -s $generic_name ]  && ln -s $CR_fasta_name $generic_name
 
-   [ ! -s $CR_no_flanks_fasta_name ] && just_CR_no_flanks $generic_name > $CR_no_flanks_fasta_name  # 06Jan23
+   create_no_flank_CR_file_if_needed  # depends on generic_name CR_no_flanks_fasta_name being set
 
    # make softlinks to the CR consensus frm the msa work so we can compare it with the tandem repeat versions
    CR_consensus_path=${exec_path}/${consensus_dir}/*_CR_*.consensus.fa
@@ -112,6 +139,7 @@ function make_softlinks {  # make soft link to CR sequences if not already there
    [ ! -s $msa_consensus_no_flanks ] && ln -s ../msa_assembly/consensus/CR_consensus.fa $msa_consensus_no_flanks
 }
 
+# DEPRECATED
 function do_prep {
    # prep the records associated with each copynum of the repeats by creating dirs with relevaant reads under tr_copynum_crs dir
    # the prep shows its work in the cr_dir file tr_copynum_info.tsv, so if it exists we have already done at least the prep work prseumably
@@ -123,6 +151,7 @@ function do_prep {
       msg "tr_copynum_info.tsv already created"
    fi
 }
+# DEPRECATED
 function show_prep_results {
    if [ -s tr_copynum_info.tsv ]; then
       msglog_module "$(grep -v ^# tr_copynum_info.tsv -c) sets of tandem repeat records to analyze -- this includes one set of records with no tandem repeats\n"
@@ -133,6 +162,7 @@ function show_prep_results {
    fi
 }
 
+# DEPRECATED
 function make_cr_tr_consensus_anno {
    [ ! -d tr_copynum_crs ] && return
 
@@ -143,6 +173,7 @@ function make_cr_tr_consensus_anno {
    popd >/dev/null
 }
 
+# DEPRECATED
 function make_done_file {  # presumes we are in $cr_dir
    echo "trf_analysis_completed" > trf_analysis.done
 }
