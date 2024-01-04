@@ -30,15 +30,18 @@ function set_mito_code_from_taxid {
 
 function view_mitogenome_names {
    tid=$1
-   (echo List of $num_mitogenomes mitogenomes associated with taxid $tid. Press Q to exit. && (blastdbcmd -db $mitodb_path -taxidlist <(make_taxidlist.sh $tid) | grep "^>")) | less -N
+   [ ! -s ${wdir}/taxidlist ] && make_taxidlist.sh $tid >${wdir}/taxidlist  # 05Dec2023 use existing file or create it
+   (echo List of $num_mitogenomes mitogenomes associated with taxid $tid. Press Q to exit. && (blastdbcmd -db $mitodb_path -taxidlist ${wdir}/taxidlist | grep "^>")) | less -N
 }
 
 while true; do
 
    if is_number $taxtok; then
-      num_ids=$(make_taxidlist.sh $taxtok |wc -l)
+      msg "creating taxidlist for $taxtok..."
+      make_taxidlist.sh $taxtok >${wdir}/taxidlist   # 05Dec2023 create the file so we do not have call make_taxidlist.sh multiply
+      num_ids=$(wc -l ${wdir}/taxidlist)
       lineage=$(grep -m1 "^${taxtok}\s" $fullnamelineage)
-      num_mitogenomes=$(blastdbcmd -db $mitodb_path -taxidlist <(make_taxidlist.sh $taxtok) | grep -c "^>")
+      num_mitogenomes=$(blastdbcmd -db $mitodb_path -taxidlist ${wdir}/taxidlist | grep -c "^>")
 
       msg "\ntaxid $lineage\n"
       msg "taxid $taxtok has $num_mitogenomes mitogenomes in $mitodb_path matching one of the $num_ids taxids associated with it. These $num_mitogenomes will be used to limit the mitogenome search.\n"
@@ -81,7 +84,7 @@ set_wdir
 # write 2 files, one with number that got us our list and the other the list of taxid numbers we will use for limiting the mito search
 topid_name=$(awk -F "\t" -v taxid=$taxtok '$1==taxid{print $3; exit}' $fullnamelineage)
 
-make_taxidlist.sh $taxtok >${wdir}/taxidlist
+[ ! -s ${wdir}/taxidlist ] && make_taxidlist.sh $taxtok >${wdir}/taxidlist
 
 # log the info and also store the taxid info in the settings file
 msglog_module "$topid_name mitogenomes, taxid $taxtok, chosen as search targets. $num_mitogenomes $topid_name mitogenomes in the $mitodb_path db."
