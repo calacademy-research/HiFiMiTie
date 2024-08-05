@@ -442,26 +442,8 @@ function add_repeats_to_anno {
    repeat_results=$(anno_repeats_from_trf_stats_report $trf_stats)
 
    if [ ! -z "$repeat_results" ]; then
-      cawk -t '
-         FILENUM==1 && FNR==1{trf_start = $2; trf_end = $3; trf_line = $0}
-         FILENUM==1 { trf_lines[++trf_count] = $0 }
-
-         FILENUM==2 && /^#/ {print; next}
-         FILENUM==2 {
-            if ($2 > trf_start && ! trf_prtd) {
-               prt_repeats()
-            }
-            print
-         }
-         END { if (! trf_prtd) prt_repeats() }
-
-         function prt_repeats() {
-            # print trf_line  13MAR2023 can be more than one repeat, output them all here
-            for (r=1; r <= trf_count; r++)
-               print trf_lines[r]
-            trf_prtd = trf_count
-         }
-      ' <(anno_repeats_from_trf_stats_report $trf_stats) $anno > $trf_anno  # 13Mar2023 replace get_formatted_trf_line with anno_repeats_from_trf_stats_report
+      sort_fld=2  # 06Jun2024 use new do_insert_sort_by_field to add repeat lines in correct positions
+      do_insert_sort_by_field <(anno_repeats_from_trf_stats_report $trf_stats) $anno $sort_fld > $trf_anno
 
       anno_size=$(stat -c %s $anno)
       trf_anno_size=$(stat -c %s $trf_anno)

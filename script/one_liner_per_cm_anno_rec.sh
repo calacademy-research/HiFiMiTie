@@ -2,8 +2,12 @@
 
 # 10Aug2022 -- add categorization of annotation for suspect one with comment at end of line
 # 06Sep2022 -- remove gh, OL and OH items for template and record to compare with. I.e., ignore those for template order comparison
+# 09May2023 -- change too few items to be 3 from 7
+
 right_neighbors=cm_anno_right_neighbor.matrix
 cm_anno_recs=mito_hifi_recs.cm_anno
+
+TOO_FEW_DEFAULT=3  # was 7
 
 cand=$(ls -td hfmt_[0-9]*/ 2>/dev/null | head -1)
 
@@ -36,8 +40,8 @@ function categorize_cm_annos {
    # to remove these from the list do grep -v "#"
    anno_file=$1
 
-   awk  '
-      BEGIN {OFS = "\t"; too_few = 7} # too_few refers to number of elments annotated
+   awk  -v too_few=$TOO_FEW_DEFAULT ' # too_few refers to number of elements annotated
+      BEGIN {OFS = "\t"}
       function prepare_anno() {
          too_many = 0 # counts number of first annotation elements in rest of annotation
          anno = $0
@@ -53,6 +57,7 @@ function categorize_cm_annos {
          gsub("OL", "", anno)
          gsub("OH", "", anno)
          gsub("  *", " ", anno)
+         sub("^ *", "", anno)  # 02Apr2023 fixes problem if OH or gh or OL is the very first item
          len2 = length(anno)
 
          num_annotated =  split(anno, ar, " ")

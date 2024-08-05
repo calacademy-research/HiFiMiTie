@@ -58,8 +58,8 @@ function set_trnas_to_pull_from { # set the trna vars and sequence split msg var
    true
 }
 
-# 04Sep2022 at some point we should replace using the blst features results for sequence splitting info
-# and move to using the results from cm_results but here will we use the cm_results to  throwout records
+# 04Sep2022 at some point we should replace using the blast features results for sequence splitting info
+# and move to using the results from cm_results but here will we use the cm_results to throwout records
 # that have problems if there are still enough to work with (that test to be done later)
 function filter_reads {
    fasta=$1
@@ -69,7 +69,7 @@ function filter_reads {
 
    if [ ! -s "$one_liner" ]; then
       cat $fasta  # no file to use for the sieve just move things along
-   else # remember those that have a comment line with a {TWN] aftern the space and we will not pass those along
+   else # remember those that have a comment line with a [TWN] after the space and we will not pass those along
       bawk -v excludes=$excludes '
          FNR==NR && /# [TWN]/ {
             dont_use[$name] = $0
@@ -254,10 +254,23 @@ function make_blast_feature_extracts {
    numrecs ${splitseq_feat_subdir}/*.fasta > $feat_donefile
 }
 
-# softlink to either the blast features files or to the cm_results fasta depending on some criteria (currently hardwired to cm_results)
+# presumes we are in $splitseq_dir and if cm_results_subdir has the 3 non-empty fasta use it
+# else if feat_subdir has them then choose, else error -- 21Apr2024
+function choose_source_dir {
+   local file1=$(basename $outfile1); local file2=$(basename $outfile2); local file3=$(basename $outfile3)
+   local cm_dir=$(basename $splitseq_cm_results_subdir); local feat_dir=$(basename $splitseq_feat_subdir)
+
+   [ -s $cm_dir/$file1 ]   && [ -s $cm_dir/$file2 ]   && [ -s $cm_dir/$file3 ]   && echo $cm_dir   && msglog_module "softlink to $cm_dir" && return
+   [ -s $feat_dir/$file1 ] && [ -s $feat_dir/$file2 ] && [ -s $feat_dir/$file3 ] && echo $feat_dir && msglog_module "softlink to $feat_dir" && return
+
+   msglog_module Problem with split seq files
+   echo $cm_dir
+}
+
+# softlink to either the blast features files or to the cm_results fasta depending on some criteria (cm_results was is non-empty otherwise feat if non-empty)
 function make_softlinks {
    pushd $splitseq_dir >/dev/null
-   local source_dir=$(basename $splitseq_cm_results_subdir)
+   local source_dir=$(choose_source_dir)   # chgd 21Apr2024, was hardwired to $(basename $splitseq_cm_results_subdir)
 
    for fa in $source_dir/*.fasta; do
       ln -s $fa

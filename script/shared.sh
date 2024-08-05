@@ -434,6 +434,33 @@ function clear_stop_run {  # delete the file so we can try agin
 
 ############################################################################
 
+function do_insert_sort_by_field {  # 06Jun2024
+   # arg1 is file with lines sorted by arg3 (default is field 2). insert those lines sorted by arg3 of file of arg2
+
+   local sort_fld=$3;
+   [ -z $3 ] && sort_fld=2
+
+   awk -v sort_fld=$sort_fld '
+      FNR==NR { sortpos_ar[++s] = $sort_fld; line_ar[s] = $0; next }
+
+      FNR==1 { cur = 1; insert_before = sortpos_ar[cur] }
+      /^#/{ print; next }
+
+      {
+         while (insert_before > 0 && insert_before < $sort_fld) {
+            print line_ar[cur]
+            insert_before = sortpos_ar[++cur]
+         }
+      }
+
+      { print }
+
+      END { while (insert_before > 0) { print line_ar[cur]; insert_before = sortpos_ar[++cur] } }
+   ' $1 $2
+}
+
+############################################################################
+
 set_wdir
 set_taxonomy_vars
 set_dir_vars

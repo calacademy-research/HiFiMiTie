@@ -80,7 +80,7 @@ function add_counts_to_settings {
    # count the reads that are candidates for having the whole non-cr sequence in them
    local starting_trna=$(get_setting_or_default "first_trna" "F")
    local last_trna=$(get_setting_or_default "last_trna" "P")
-   qry="^m.*${starting_trna}.*${last_trna}"
+   qry="^[a-zA-Z].*${starting_trna}.*${last_trna}"
    complete_non_cr_recs=$(grep $qry $one_liner_annos | grep -c -v "# T")  # the "# T" excludes those that do not match template
 
    update_setting_if_changed "cm_tot_anno_recs" "$tot_recs"
@@ -162,8 +162,8 @@ function goosehairpin_trnaset {
 function find_goosehairpin_bounding_trnas {
    trna_set=$(goosehairpin_trnaset)
 
-   first_let=$(echo $trna_set | cut -c1)
-   last_let=$(echo $trna_set  | cut -c3)
+   first_let=$(echo $trna_set | awk '{print $1; exit}')  # 23Mar2023 use awk for field insteand cut for letter
+   last_let=$(echo $trna_set  | awk '{print $2; exit}')  # 23Mar2023 use awk for field insteand cut for letter in case S1 S2 L1 or L2
    [ ! -z $first_let ] && update_setting "gh_prev_trna" $first_let
    [ ! -z $last_let ]  && update_setting "gh_succ_trna" $last_let
 }

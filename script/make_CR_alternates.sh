@@ -137,7 +137,7 @@ function cr_alt_tandem_repeats_analysis {
    run_trf.sh CR_alts.fasta
    echo "" # no final eol by trf program
 
-   rm *.html
+   rm *.html 2>/dev/null
    cawk -t '{print $1;for(f=3;f<NF;f+=5)print fldcat(f,f+4)}' $trf_report |
    awk 'NF>1{sub("--"," ",$1)}{print}' > CR_trf_overview.txt
 
@@ -168,7 +168,7 @@ function finish_anno {  # basic anno file in trfdir .repeats files. add gh and O
       bn=$(basename $rpt .repeats)
       fa=$CR_altdir/$bn.fa
       anno=$CR_altdir/$bn.anno
-      if [ -s $fa ]; then
+      if [ -s "$fa" ]; then
          $script_dir/add_goosehairpin_to_mitfi.sh $rpt $fa |
          add_OH_to_anno $fa > $anno  # todo: look for OH in $fa and add it if found
       fi
@@ -196,6 +196,14 @@ function blast_OH_to_fasta {
    blastn -db $OH_db -query $qry -outfmt  "6 std staxid stitle qlen qcovhsp qcovus"  -max_target_seqs 5 -subject_besthit -evalue $evalue -num_threads $threads >$output_file
 }
 
+function make_msa_alternate_comparison_file {
+   msg Create an alignment comparison between the msa CR and the alternates
+   compfile=$CR_altdir/msa_CR_and_alternate_CR.comparisons
+
+   $script_dir/compare_w_mafft.sh $CR_altdir
+   [ -s $compfile ] && msglog_module "Comparison file $compfile created."
+}
+
 function run_cr_range_analysis {
    CR_input=CR_recs_no_flanks.fasta
    CR_altdir=CR_alternates
@@ -211,4 +219,5 @@ function run_cr_range_analysis {
    make_cr_alts_from_msa_files
    cr_alt_tandem_repeats_analysis
    finish_anno
+   make_msa_alternate_comparison_file
 }

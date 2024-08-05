@@ -114,9 +114,23 @@ function add_to_mitfi {
    fi
 }
 
+function remove_dup_lines {  # 03Aug2024 keep duplicate OH lines out
+   cawk -t '
+      /^#/ { print; next }
+      { str = $2; end = $3; typ = $7 }
+
+      strt == last_strt && end == last_end && typ == last_typ {
+         next
+      }
+
+      { last_strt = strt; last_end = end; last_typ = typ }
+
+      { print }
+   '
+}
 
 #################################################################
 #                        do the work                            #
 #################################################################
 
-best_pcg_hits $fasta | format_pcg_hits | add_to_mitfi - $mitfi
+best_pcg_hits $fasta | format_pcg_hits | add_to_mitfi - $mitfi | remove_dup_lines

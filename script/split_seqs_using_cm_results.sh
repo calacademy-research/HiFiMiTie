@@ -40,7 +40,7 @@ function msg {
 # use the quality analysis in the the oneliner comments to exlcude some of these
 function hiqual_cm_anno {
    awk '
-      FNR==NR && /^m/ {
+      FNR==NR && /^[a-zA-Z]/ {
          if (match($0, "# [TN]", ar))
             next
 

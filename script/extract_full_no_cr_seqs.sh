@@ -30,7 +30,7 @@ cr_prev_3let=$(awk '{print $2}' <(AAsyms.sh $cr_prev))
 function grep_full_noncr_lines {
    # grep "^m.*M.*V" one_line_per_rec.cm_anno.srt | grep -v "# T" | sed s/~//
 
-   qry="^m.*${cr_succ}.*${cr_prev}"
+   qry="^[a-zA-Z].*${cr_succ}.*${cr_prev}"
    grep $qry $one_liner | grep -v "# T" | sed s/~//  # the "# T" excludes those that do not match template
 }
 

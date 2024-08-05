@@ -129,9 +129,9 @@ function prt_results {
          for (l = 1; l <= len; l += show) {
             mtch_str = substr(ar[2], l, show)
             charcount(mtch_str, chrs)
-            mtch_count = chrs["|"]
-            indel_count = chrs["-"]
-            addtl = (indel_count=="") ? "" : " " indel_count " indels"
+            mtch_count = int( chrs["|"] )
+            indel_count = int( chrs["-"] )
+            addtl = (indel_count==0) ? "" : " " indel_count " indels"
             update_seq_pos(l, show)
 
             to_show = min(l+show-1, len)
